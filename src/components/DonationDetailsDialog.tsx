@@ -1,19 +1,16 @@
 'use client';
 
-import { MouseEventHandler, useEffect, useState, Dispatch, SetStateAction } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import {
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions,
     Button,
     IconButton,
     Typography,
     Stack,
     Chip,
     Divider,
-    ImageList,
-    ImageListItem,
     Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -29,6 +26,7 @@ import { getDonationById, updateDonation, updateDonationStatus } from '@/api/fir
 import { productLifeCycleReport } from '@/api/firebase-reports';
 import { addErrorEvent } from '@/api/firebase';
 import { getStatusChipProps } from '@/utils/statusChipProps';
+import ImageGallery from './ImageGallery';
 import { Donation } from '@/models/donation';
 
 type DonationDetailsDialogProps = {
@@ -43,8 +41,6 @@ export default function DonationDetailsDialog({ open, donation, onClose, setDona
     const [donationDetailsUpdated, setDonationDetailsUpdated] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [isImageOpen, setIsImageOpen] = useState(false);
-    const [openImageURL, setOpenImageURL] = useState('');
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState('');
 
@@ -130,11 +126,6 @@ export default function DonationDetailsDialog({ open, donation, onClose, setDona
         if (setDonationsUpdated) setDonationsUpdated(true);
     };
 
-    const handleImageClick: MouseEventHandler<HTMLImageElement> = (event) => {
-        setOpenImageURL(event.currentTarget.src);
-        setIsImageOpen(true);
-    };
-
     const statusChip = donationDetails ? getStatusChipProps(donationDetails.status) : null;
 
     return (
@@ -160,21 +151,7 @@ export default function DonationDetailsDialog({ open, donation, onClose, setDona
 
                     {!isLoading && donationDetails && !isEditMode && (
                         <Box>
-                            {donationDetails.images.length > 0 && (
-                                <ImageList cols={Math.min(donationDetails.images.length, 3)} gap={8} sx={{ mb: 2 }}>
-                                    {donationDetails.images.map((image) => (
-                                        <ImageListItem key={image as string}>
-                                            <img
-                                                src={`${image}`}
-                                                alt={donationDetails.model}
-                                                loading="lazy"
-                                                onClick={handleImageClick}
-                                                style={{ cursor: 'pointer', borderRadius: 4 }}
-                                            />
-                                        </ImageListItem>
-                                    ))}
-                                </ImageList>
-                            )}
+                            <ImageGallery images={donationDetails.images as string[]} alt={donationDetails.model} />
 
                             <Typography variant="h5" gutterBottom>
                                 {donationDetails.brand} - {donationDetails.model}
@@ -280,13 +257,6 @@ export default function DonationDetailsDialog({ open, donation, onClose, setDona
                         />
                     )}
                 </DialogContent>
-            </Dialog>
-
-            <Dialog open={isImageOpen} onClose={() => setIsImageOpen(false)} maxWidth="lg">
-                <img src={openImageURL} alt="" style={{ maxWidth: '100%' }} />
-                <DialogActions>
-                    <Button onClick={() => setIsImageOpen(false)}>Close</Button>
-                </DialogActions>
             </Dialog>
 
             <CustomDialog isOpen={isConfirmDialogOpen} title="Donation updated" content={dialogContent} onClose={handleConfirmClose} />

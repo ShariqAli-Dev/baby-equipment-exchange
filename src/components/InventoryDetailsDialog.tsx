@@ -1,6 +1,6 @@
 'use client';
 
-import { MouseEventHandler, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -10,9 +10,7 @@ import {
     IconButton,
     Typography,
     Box,
-    Chip,
-    ImageList,
-    ImageListItem
+    Chip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
@@ -20,6 +18,7 @@ import { getStatusChipProps } from '@/utils/statusChipProps';
 import { getInventoryItemById } from '@/api/firebase-donations';
 import { addErrorEvent } from '@/api/firebase';
 import Loader from './Loader';
+import ImageGallery from './ImageGallery';
 import { InventoryItem } from '@/models/inventoryItem';
 
 type InventoryDetailsDialogProps = {
@@ -32,15 +31,10 @@ type InventoryDetailsDialogProps = {
 export default function InventoryDetailsDialog({ open, item, onClose, handleRequestInventoryItem }: InventoryDetailsDialogProps) {
     const [itemDetails, setItemDetails] = useState<InventoryItem | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isImageOpen, setIsImageOpen] = useState(false);
-    const [openImageURL, setOpenImageURL] = useState('');
 
     useEffect(() => {
         if (open && item) {
             setItemDetails(item);
-        }
-        if (!open) {
-            setIsImageOpen(false);
         }
     }, [open, item]);
 
@@ -62,11 +56,6 @@ export default function InventoryDetailsDialog({ open, item, onClose, handleRequ
         }
     }, [open, item]);
 
-    const handleImageClick: MouseEventHandler<HTMLImageElement> = (event) => {
-        setOpenImageURL(event.currentTarget.src);
-        setIsImageOpen(true);
-    };
-
     const handleAdd = () => {
         if (itemDetails && itemDetails.status === 'available') {
             handleRequestInventoryItem(itemDetails);
@@ -81,8 +70,7 @@ export default function InventoryDetailsDialog({ open, item, onClose, handleRequ
     const canRequest = details.status === 'available';
 
     return (
-        <>
-            <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Item Details
                     <IconButton onClick={onClose} size="small">
@@ -93,21 +81,7 @@ export default function InventoryDetailsDialog({ open, item, onClose, handleRequ
                     {isLoading && <Loader />}
                     {!isLoading && (
                         <>
-                            {details.images && (details.images as string[]).length > 0 && (
-                                <ImageList cols={(details.images as string[]).length > 1 ? 2 : 1} gap={8} sx={{ mb: 2 }}>
-                                    {(details.images as string[]).map((image) => (
-                                        <ImageListItem key={image}>
-                                            <img
-                                                src={image}
-                                                alt={details.model}
-                                                loading="lazy"
-                                                onClick={handleImageClick}
-                                                style={{ borderRadius: 4, maxHeight: 300, objectFit: 'cover', cursor: 'pointer' }}
-                                            />
-                                        </ImageListItem>
-                                    ))}
-                                </ImageList>
-                            )}
+                            <ImageGallery images={details.images as string[]} alt={details.model} />
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <Typography variant="h6">{details.brand} {details.model}</Typography>
                                 <Typography variant="body2" color="text.secondary">
@@ -137,14 +111,6 @@ export default function InventoryDetailsDialog({ open, item, onClose, handleRequ
                         Add to order
                     </Button>
                 </DialogActions>
-            </Dialog>
-
-            <Dialog open={isImageOpen} onClose={() => setIsImageOpen(false)}>
-                <img src={openImageURL} alt="Full size" style={{ maxWidth: '100%' }} />
-                <DialogActions>
-                    <Button onClick={() => setIsImageOpen(false)}>Close</Button>
-                </DialogActions>
-            </Dialog>
-        </>
+        </Dialog>
     );
 }

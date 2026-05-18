@@ -1,10 +1,11 @@
 'use client';
 
-import { Dialog, DialogContent, DialogActions, Button, IconButton, ImageList, ImageListItem, Typography, Box, DialogTitle } from '@mui/material';
+import { Dialog, DialogContent, DialogActions, Button, IconButton, Typography, Box, DialogTitle } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import { useRequestedInventoryContext } from '@/contexts/RequestedInventoryContext';
 import { InventoryItem } from '@/models/inventoryItem';
+import ImageGallery from '@/components/ImageGallery';
 import posthog from 'posthog-js';
 
 type InventoryDetailsDialogProps = {
@@ -33,20 +34,7 @@ export default function InventoryDetailsDialog({ open, item, onClose }: Inventor
                 </IconButton>
             </DialogTitle>
             <DialogContent>
-                {item.images && item.images.length > 0 && (
-                    <ImageList cols={item.images.length > 1 ? 2 : 1} gap={8} sx={{ mb: 2 }}>
-                        {item.images.map((image) => (
-                            <ImageListItem key={image as string}>
-                                <img
-                                    src={image as string}
-                                    alt={item.model}
-                                    loading="lazy"
-                                    style={{ borderRadius: 4, maxHeight: 300, objectFit: 'cover' }}
-                                />
-                            </ImageListItem>
-                        ))}
-                    </ImageList>
-                )}
+                <ImageGallery images={item.images as string[]} alt={item.model} />
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="h6">{item.brand} {item.model}</Typography>
                     <Typography variant="body2" color="text.secondary">

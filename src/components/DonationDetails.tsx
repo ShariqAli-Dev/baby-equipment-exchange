@@ -1,7 +1,7 @@
 'use client';
 
 //Hooks
-import { MouseEventHandler, useCallback, useEffect, useMemo, useState, Dispatch, SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState, Dispatch, SetStateAction } from 'react';
 //APi
 import { addErrorEvent } from '@/api/firebase';
 import { deleteInventoryDonationById, getDonationById, updateDonation, updateInventoryDonationStatus } from '@/api/firebase-donations';
@@ -13,8 +13,6 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    ImageList,
-    ImageListItem,
     Button,
     Divider,
     IconButton,
@@ -24,6 +22,7 @@ import {
 import Loader from '@/components/Loader';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import CustomDialog from './CustomDialog';
+import ImageGallery from './ImageGallery';
 import EditDonation from '@/components/EditDonation';
 //icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -54,8 +53,6 @@ const DonationDetails = (props: DonationDetailsProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [actionInProgress, setActionInProgress] = useState<boolean>(false);
     const [isEditMode, setIsEditMode] = useState<boolean>(false);
-    const [isImageOpen, setIsImageOpen] = useState<boolean>(false);
-    const [openImageURL, setOpenImageURL] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
     const [dialogContent, setDialogContent] = useState<string>('');
@@ -112,11 +109,6 @@ const DonationDetails = (props: DonationDetailsProps) => {
         setIsDialogOpen(false);
     };
 
-    const handleImageClick: MouseEventHandler<HTMLImageElement> = (event) => {
-        setOpenImageURL(event.currentTarget.src);
-        setIsImageOpen(true);
-    };
-
     const resetToInProcessing = async (): Promise<void> => {
         setActionInProgress(true);
         try {
@@ -153,8 +145,6 @@ const DonationDetails = (props: DonationDetailsProps) => {
         }
     };
 
-    const handleImageClose = () => setIsImageOpen(false);
-
     const generateProductLifeCycleReport = (donation: Donation) => {
         return productLifeCycleReport(donation);
     };
@@ -185,13 +175,7 @@ const DonationDetails = (props: DonationDetailsProps) => {
                 {!isLoading && donationDetails === null && <p>Donation not found</p>}
                 {!isLoading && donationDetails !== null && !isEditMode && (
                     <div className="content--container">
-                        <ImageList>
-                            {donationDetails.images.map((image) => (
-                                <ImageListItem key={image as string}>
-                                    <img src={`${image}`} alt={donationDetails.model} loading="lazy" onClick={handleImageClick} />
-                                </ImageListItem>
-                            ))}
-                        </ImageList>
+                        <ImageGallery images={donationDetails.images as string[]} alt={donationDetails.model} />
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ marginBottom: '1em' }}>
                             <Button variant="contained" type="button" startIcon={<EditIcon />} disabled={actionInProgress} onClick={() => setIsEditMode(true)}>
                                 Edit Donation
@@ -309,14 +293,6 @@ const DonationDetails = (props: DonationDetailsProps) => {
                                 {donationDetails.dateDistributed.toDate().toDateString()}
                             </Typography>
                         )}
-                        <Dialog open={isImageOpen} onClose={handleImageClose} sx={{ width: '100%' }}>
-                            <img src={openImageURL} alt={openImageURL} style={{ maxWidth: '100%' }} />
-                            <DialogActions>
-                                <Button type="button" onClick={handleImageClose}>
-                                    Close
-                                </Button>
-                            </DialogActions>
-                        </Dialog>
                         <CustomDialog isOpen={isDialogOpen} title="Donation updated" content={dialogContent} onClose={handleClose} />
                         <Dialog open={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
                             <DialogTitle>Delete inventory item?</DialogTitle>

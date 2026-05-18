@@ -8,7 +8,6 @@ import {
     DialogContent,
     FormControl,
     FormLabel,
-    ImageList,
     MenuItem,
     NativeSelect,
     SelectChangeEvent,
@@ -18,9 +17,7 @@ import { useContext, useState } from 'react';
 import { UserContext } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 
-// Styles
-import styles from './Browse.module.css';
-
+import ImageGallery from './ImageGallery';
 import { donationStatuses, DonationStatusValues } from '@/models/donation';
 
 export default function ExistingDonationDialog({
@@ -133,19 +130,7 @@ export default function ExistingDonationDialog({
                         ))}
                     </TextField>
                 </FormControl>
-                <ImageList className={styles['browse__grid']}>
-                    {donation.images &&
-                        donation.images.map((image) => {
-                            return (
-                                <img
-                                    key={image}
-                                    src={image}
-                                    style={{ width: '100%', height: '100%', objectFit: 'fill' }}
-                                    alt={`${donation.description ?? 'No description'}`}
-                                />
-                            );
-                        })}
-                </ImageList>
+                <ImageGallery images={donation.images ?? []} alt={donation.description ?? donation.model ?? ''} />
             </DialogContent>
             <DialogActions>
                 {isAdmin && (
