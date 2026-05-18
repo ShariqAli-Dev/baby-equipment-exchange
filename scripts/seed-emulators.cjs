@@ -152,9 +152,9 @@ const DONOR1_DONATIONS = [
         description: 'Rear-facing infant seat, base included. Used for 14 months, no accidents.',
         status: 'in processing',
         images: [
-            'https://placehold.co/400x300/e8e8e8/666?text=Car+Seat+Front',
-            'https://placehold.co/400x300/d4e8d4/444?text=Car+Seat+Side',
-            'https://placehold.co/400x300/d4d4e8/444?text=Car+Seat+Base'
+            'https://placehold.co/400x300/e8e8e8/666?text=Normal+400x300',
+            'https://placehold.co/600x100/d4e8d4/444?text=Wide+600x100',
+            'https://placehold.co/150x600/d4d4e8/444?text=Tall+150x600'
         ]
     },
     {
@@ -270,8 +270,8 @@ const ADMIN_DONATIONS = [
         donorId: 'admin1',
         images: [
             'https://placehold.co/400x300/e8e8e8/666?text=Car+Seat+Front',
-            'https://placehold.co/400x300/d4e8d4/444?text=Car+Seat+Side',
-            'https://placehold.co/400x300/d4d4e8/444?text=Base+1',
+            'https://placehold.co/1200x1200/d4e8d4/444?text=Square+1200x1200',
+            'https://placehold.co/80x60/d4d4e8/444?text=Tiny+80x60',
             'https://placehold.co/400x300/e8d4e8/444?text=Base+2'
         ]
     },
@@ -446,8 +446,9 @@ const RESERVED_DONATIONS_ANON = [
         donorName: 'Anonymous Drop-Off',
         donorId: 'admin1',
         images: [
-            'https://placehold.co/400x300/e8e8e8/666?text=Stroller+Front',
-            'https://placehold.co/400x300/d4e8d4/444?text=Stroller+Folded'
+            'https://placehold.co/400x300/e8e8e8/666?text=Normal+400x300',
+            'https://placehold.co/100x400/d4e8d4/444?text=Tall+100x400',
+            'https://placehold.co/900x150/d4d4e8/444?text=Panoramic+900x150'
         ]
     },
     {
@@ -499,10 +500,10 @@ const AVAILABLE_INVENTORY = [
         donorName: 'Anonymous Drop-Off',
         donorId: 'admin1',
         images: [
-            'https://placehold.co/400x300/e8e8e8/666?text=Car+Seat+Front',
-            'https://placehold.co/400x300/d4e8d4/444?text=Car+Seat+Rear',
-            'https://placehold.co/400x300/d4d4e8/444?text=ClickTight+Install',
-            'https://placehold.co/400x300/e8d4e8/444?text=Expiry+Label'
+            'https://placehold.co/400x300/e8e8e8/666?text=Normal+400x300',
+            'https://placehold.co/800x200/d4e8d4/444?text=Panoramic+800x200',
+            'https://placehold.co/200x800/d4d4e8/444?text=Tall+200x800',
+            'https://placehold.co/50x50/e8d4e8/444?text=Tiny'
         ]
     },
     {
@@ -568,9 +569,7 @@ const AVAILABLE_INVENTORY = [
         donorName: 'Anonymous Drop-Off',
         donorId: 'admin1',
         images: [
-            'https://placehold.co/400x300/e8e8e8/666?text=Gym+Full',
-            'https://placehold.co/400x300/d4e8d4/444?text=Piano+Detail',
-            'https://placehold.co/400x300/d4d4e8/444?text=Hanging+Toys'
+            'https://placehold.co/400x300/e8e8e8/666?text=Single+Image+Only'
         ]
     },
     {
