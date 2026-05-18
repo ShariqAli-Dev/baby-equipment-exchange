@@ -36,7 +36,7 @@ export default function ImageGallery({ images, alt, aspectRatio = '4/3' }: Props
                     '& img': {
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',
                         transition: 'opacity 150ms ease',
                         display: 'block'
                     }
