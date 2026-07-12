@@ -6,7 +6,6 @@ import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 import { useUserContext } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 //Components
-import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import { Box, Button, IconButton, Stack, Typography } from '@mui/material';
 import Loader from '@/components/Loader';
 import DonationForm, { DonationFormCategory, DonationFormValues } from '@/components/DonationForm';
@@ -15,8 +14,8 @@ import CustomDialog from '@/components/CustomDialog';
 //Api
 import { uploadImages } from '@/api/firebase-images';
 import { addErrorEvent } from '@/api/firebase';
-import { addAdminDonation } from '@/api/firebase-donations';
-import { getTagNumber } from '@/api/firebase-categories';
+import { addAdminDonationAction } from '@/server/actions/donations';
+import { getTagNumberAction } from '@/server/actions/categories';
 import sendMail from '@/api/nodemailer';
 import adminDonationAdded from '@/email-templates/adminDonationAdded';
 //Icons
@@ -65,7 +64,7 @@ export default function AdminDonateClient({ categories }: { categories: Donation
                         imageURLs = await uploadImages(donation.images);
                     }
                     //generate tag number using 'Other' category if category somehow isn't provided
-                    const tagNumber = donation.category ? await getTagNumber(donation.category) : await getTagNumber('Other');
+                    const tagNumber = donation.category ? await getTagNumberAction(donation.category) : await getTagNumberAction('Other');
 
                     const newDonation = {
                         donorName: currentUser.displayName,
@@ -95,7 +94,7 @@ export default function AdminDonateClient({ categories }: { categories: Donation
         setIsLoading(true);
         try {
             const donationsToUpload: AdminDonationBody[] = await convertPendingDonations(pendingDonations);
-            await addAdminDonation(donationsToUpload);
+            await addAdminDonationAction(donationsToUpload);
             clearPendingDonations();
             localStorage.clear();
             if (currentUser?.email && currentUser?.displayName) {
@@ -118,7 +117,7 @@ export default function AdminDonateClient({ categories }: { categories: Donation
     }, [pendingDonations, showForm]);
 
     return (
-        <ProtectedAdminRoute>
+        <>
             <div className="page--header">
                 <h3>Create donation</h3>
                 <IconButton onClick={() => router.push('./')}>
@@ -203,6 +202,6 @@ export default function AdminDonateClient({ categories }: { categories: Donation
                     )
                 }
             />
-        </ProtectedAdminRoute>
+        </>
     );
 }

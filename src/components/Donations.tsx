@@ -1,13 +1,15 @@
 'use client';
 
+// INTERIM: only the admin Dashboard (deleted in the home/dashboard vertical) still
+// renders this. The canonical donations list is the server page at /donations;
+// card clicks navigate to /donations/[id] instead of the deleted details dialog.
+
 //Hooks
 import { SetStateAction, useState, Dispatch, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 //Components
 import { Box, Button, Chip, Autocomplete, TextField, Stack, Typography, InputAdornment } from '@mui/material';
-import DonationCard from '@/components/DonationCard';
-import DonationDetailsDialog from '@/components/DonationDetailsDialog';
-import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
+import DonationCard, { DonationCardData } from '@/components/DonationCard';
 //Api
 import { getAllCategories } from '@/api/firebase-categories';
 
@@ -28,11 +30,24 @@ type DonationsProps = {
 
 const statusSelectOptions = Object.keys(donationStatuses);
 
+function toCardData(donation: Donation): DonationCardData {
+    return {
+        id: donation.id,
+        brand: donation.brand,
+        model: donation.model,
+        category: donation.category,
+        tagNumber: donation.tagNumber ?? null,
+        status: donation.status,
+        donorEmail: donation.donorEmail,
+        images: donation.images,
+        dateLabel:
+            (donation.dateAccepted ?? donation.createdAt)?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) ?? null
+    };
+}
+
 const Donations = (props: DonationsProps) => {
-    const { donations, setDonationsUpdated } = props;
-    const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
+    const { donations } = props;
     const [searchInput, setSearchInput] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [categories, setCategories] = useState<Category[] | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<string[] | undefined>([]);
     const [statusFilter, setStatusFilter] = useState<string[] | undefined>([]);
@@ -40,14 +55,11 @@ const Donations = (props: DonationsProps) => {
 
     const fetchCategories = async (): Promise<void> => {
         try {
-            setIsLoading(true);
             const categoriesResult = await getAllCategories();
             setCategories(categoriesResult);
         } catch (error) {
             addErrorEvent('Error fetching all categories: ', error);
             throw error;
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -87,10 +99,11 @@ const Donations = (props: DonationsProps) => {
 
     useEffect(() => {
         if (!categories) fetchCategories();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
-        <ProtectedAdminRoute>
+        <>
             <div className="page--header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h5">Donations</Typography>
                 <Button startIcon={<AddIcon />} variant="contained" type="button" onClick={() => router.push('/admin-donate')}>
@@ -162,17 +175,11 @@ const Donations = (props: DonationsProps) => {
                     }}
                 >
                     {donationsToDisplay.map((donation) => (
-                        <DonationCard key={donation.id} donation={donation} onSelect={(d) => setSelectedDonation(d)} />
+                        <DonationCard key={donation.id} donation={toCardData(donation)} href={`/donations/${donation.id}`} />
                     ))}
                 </Box>
             )}
-            <DonationDetailsDialog
-                open={selectedDonation !== null}
-                donation={selectedDonation}
-                onClose={() => setSelectedDonation(null)}
-                onUpdated={() => setDonationsUpdated?.(true)}
-            />
-        </ProtectedAdminRoute>
+        </>
     );
 };
 

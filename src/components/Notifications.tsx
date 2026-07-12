@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 //Components
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import UserDetails from '@/components/UserDetails';
-import DonationDetailsDialog from '@/components/DonationDetailsDialog';
 import ReviewOrder from './ReviewOrder';
 import NotificationCard from '@/components/NotificationCard';
 import { Box, Button, Chip, Divider, InputAdornment, Paper, Tab, Tabs, TextField, Typography } from '@mui/material';
@@ -130,7 +129,6 @@ const groupByRequestor = (orders: Order[]): RequestorGroup[] => {
 const Notifications = (props: NotificationsProps) => {
     const { notifications, setNotificationsUpdated } = props;
 
-    const [donationIdToDisplay, setDonationIdToDisplay] = useState<string | null>(null);
     const [userIdToDisplay, setUserIdToDisplay] = useState<string | null>(null);
     const [orderIdToDisplay, setOrderIdToDisplay] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<number>(0);
@@ -148,11 +146,15 @@ const Notifications = (props: NotificationsProps) => {
     const requestorGroups = groupByRequestor(orders);
     const usersAwaitingApproval = notifications.users.filter((user) => !user.isDeleted).filter((u) => !q || userMatches(u, q));
 
-    const donationToDisplay = donationIdToDisplay
-        ? ([...notifications.donations, ...notifications.orders.flatMap((o) => o.items)].find((d) => d.id === donationIdToDisplay) ?? null)
-        : null;
-
     const router = useRouter();
+
+    // INTERIM (until the notifications vertical migrates this component): donation
+    // drill-down navigates to the canonical /donations/[id] route — the old
+    // DonationDetailsDialog is gone. Keeps NotificationCard's Dispatch-shaped prop.
+    const setDonationIdToDisplay: Dispatch<SetStateAction<string | null>> = (action) => {
+        const donationId = typeof action === 'function' ? action(null) : action;
+        if (donationId) router.push(`/donations/${donationId}`);
+    };
 
     const itemCount = (n: number) => `${n} item${n !== 1 ? 's' : ''}`;
 
@@ -222,12 +224,6 @@ const Notifications = (props: NotificationsProps) => {
 
     return (
         <ProtectedAdminRoute>
-            <DonationDetailsDialog
-                open={donationToDisplay !== null}
-                donation={donationToDisplay}
-                onClose={() => setDonationIdToDisplay(null)}
-                onUpdated={() => setNotificationsUpdated?.(true)}
-            />
             {userIdToDisplay && <UserDetails id={userIdToDisplay} setIdToDisplay={setUserIdToDisplay} />}
             {orderIdToDisplay && (
                 <ReviewOrder

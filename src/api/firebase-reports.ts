@@ -5,6 +5,7 @@ import { stripNullUndefined } from '@/utils/utils';
 //Constants
 import { DONATIONS_COLLECTION } from './firebase-donations';
 import { Donation } from '@/models/donation';
+import type { DonationDTO } from '@/server/donations';
 
 export function downloadCsv(data: object[], fileName: string) {
     const csv = json2csv(data);
@@ -45,6 +46,39 @@ export function productLifeCycleReport(donation: Donation) {
     };
     const data = [stripNullUndefined(reportObject)];
     let fileName = donation.tagNumber ? donation.tagNumber : donation.model;
+    fileName += '_lifecycle';
+    downloadCsv(data, fileName);
+}
+
+// DTO twin of productLifeCycleReport for server-fetched donation views
+// (ISO-string dates instead of Firestore Timestamps).
+export function productLifeCycleReportFromDTO(donation: DonationDTO) {
+    const toDateString = (iso: string | null) => (iso ? new Date(iso).toDateString() : undefined);
+    const reportObject = {
+        'Tag Number': donation.tagNumber,
+        'Current Status': donation.status,
+        'Donor Email': donation.donorEmail,
+        'Donor Name': donation.donorName,
+        Category: donation.category,
+        Brand: donation.brand,
+        Model: donation.model,
+        Description: donation.description,
+        Images: donation.images,
+        'Date Accepted': toDateString(donation.dateAccepted),
+        'Date Received': toDateString(donation.dateReceived),
+        'Date Requested': toDateString(donation.dateRequested),
+        'Requester Name': donation.requestor?.name,
+        'Requester Email': donation.requestor?.email,
+        'Date Distributed': toDateString(donation.dateDistributed),
+        'Distributor Name': donation.distributor?.name,
+        'Distributor Email': donation.distributor?.email,
+        'Distributor Orginzation': donation.distributor?.organization,
+        'Days In Storage': donation.daysInStorage ?? undefined,
+        'Date Created': toDateString(donation.createdAt),
+        'Last Modified': toDateString(donation.modifiedAt)
+    };
+    const data = [stripNullUndefined(reportObject)];
+    let fileName = donation.tagNumber ? donation.tagNumber : (donation.model ?? donation.id);
     fileName += '_lifecycle';
     downloadCsv(data, fileName);
 }
