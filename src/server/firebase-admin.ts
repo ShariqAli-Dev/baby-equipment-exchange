@@ -14,7 +14,11 @@ function initAdmin() {
         return initializeApp();
     } else {
         const credentials: ServiceAccount = {
-            projectId: 'baby-equipment-exchange',
+            // Must match the service account's own project (the dev creds in
+            // .env.local belong to baby-equipment-exchange-dev). The old
+            // src/api/firebaseAdmin.ts hardcoded the prod id here, so every
+            // local Admin-SDK call failed PERMISSION_DENIED (cross-project).
+            projectId: process.env.PROJECT_ID ?? 'baby-equipment-exchange',
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY
         };
