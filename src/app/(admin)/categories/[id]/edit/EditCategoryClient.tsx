@@ -1,28 +1,22 @@
 'use client';
 
 //hooks
-import { Dispatch, SetStateAction, useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 //components
-import NumberField from './NumberField';
-import ProtectedAdminRoute from './ProtectedAdminRoute';
-import Loader from './Loader';
-import { Box, Button, Checkbox, FormControlLabel, FormGroup, Stack, TextField } from '@mui/material';
-import CustomDialog from './CustomDialog';
+import NumberField from '@/components/NumberField';
+import Loader from '@/components/Loader';
+import { Box, Button, Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } from '@mui/material';
+import CustomDialog from '@/components/CustomDialog';
 //Api
 import { addErrorEvent } from '@/api/firebase';
-import { updateCategory } from '@/api/firebase-categories';
+import { updateCategoryAction } from '@/server/actions/categories';
+//Styles
+import '@/styles/globalStyles.css';
 //types
-import { Category } from '@/models/category';
+import type { CategoryDTO } from '@/server/categories';
 
-type EditCategoryProps = {
-    category: Category;
-    setIsEditMode: Dispatch<SetStateAction<boolean>>;
-    setCategoryDetailsUpdated: Dispatch<SetStateAction<boolean>>;
-};
-
-const EditCategory = (props: EditCategoryProps) => {
-    const { category, setIsEditMode, setCategoryDetailsUpdated } = props;
-
+export default function EditCategoryClient({ category }: { category: CategoryDTO }) {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [newName, setNewName] = useState<string>(category.name);
     const [newActive, setNewActive] = useState<boolean>(category.active);
@@ -31,14 +25,16 @@ const EditCategory = (props: EditCategoryProps) => {
     const [newDescription, setNewDescription] = useState<string>(category.description ?? '');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
+    const router = useRouter();
+
     const handleCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
         setNewActive(event.target.checked);
     };
 
     const handleClose = () => {
         setIsDialogOpen(false);
-        setIsEditMode(false);
-        setCategoryDetailsUpdated(true);
+        // Action already revalidated /categories/[id]; land on the detail view.
+        router.push(`/categories/${encodeURIComponent(category.id)}`);
     };
 
     const handleSubmit = async (event: React.FormEvent): Promise<void> => {
@@ -52,7 +48,7 @@ const EditCategory = (props: EditCategoryProps) => {
                 tagPrefix: newTagPrefix,
                 tagCount: newTagCount
             };
-            await updateCategory(category.id, updatedCategory);
+            await updateCategoryAction(category.id, updatedCategory);
             setIsDialogOpen(true);
         } catch (error) {
             addErrorEvent('Error updating category: ', error);
@@ -63,7 +59,10 @@ const EditCategory = (props: EditCategoryProps) => {
     };
 
     return (
-        <ProtectedAdminRoute>
+        <>
+            <div className="page--header">
+                <Typography variant="h5">Edit Category</Typography>
+            </div>
             {isLoading && <Loader />}
             {!isLoading && (
                 <div className="content--container">
@@ -97,13 +96,14 @@ const EditCategory = (props: EditCategoryProps) => {
                             id="description"
                             placeholder="Description"
                             onChange={(e) => setNewDescription(e.target.value)}
+                            value={newDescription}
                         />
                         <NumberField label="Last tag number used" value={newTagCount} onValueChange={(e) => setNewtagCount(e ?? 0)} />
                         <Stack direction="column" spacing={2}>
                             <Button variant="contained" type="submit">
                                 Save
                             </Button>
-                            <Button variant="outlined" type="button" onClick={() => setIsEditMode(false)}>
+                            <Button variant="outlined" type="button" onClick={() => router.push(`/categories/${encodeURIComponent(category.id)}`)}>
                                 Cancel
                             </Button>
                         </Stack>
@@ -116,8 +116,6 @@ const EditCategory = (props: EditCategoryProps) => {
                     />
                 </div>
             )}
-        </ProtectedAdminRoute>
+        </>
     );
-};
-
-export default EditCategory;
+}
