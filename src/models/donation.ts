@@ -1,12 +1,6 @@
 //Firebase types
 import { DocumentReference, Timestamp } from 'firebase/firestore';
 
-export interface IDonationCache {
-    [key: string]: string | number;
-    id: string;
-    modifiedAt: number;
-}
-
 export const donationStatuses = {
     'In Processing': 'in processing',
     'Pending Delivery': 'pending delivery',

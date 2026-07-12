@@ -14,7 +14,6 @@ import '../../styles/globalStyles.css';
 import styles from './Account.module.css';
 
 // import { getUserAccount } from '@/api/firebase-users';
-import Browse from '@/components/Browse';
 
 export default function Account() {
     const [accountType, setAccountType] = useState<string>('');

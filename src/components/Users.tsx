@@ -4,8 +4,6 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 // Components
 import { InputAdornment, List, TextField, Typography } from '@mui/material';
-import SearchBar from '@/components/SearchBar';
-import Filter from '@/components/Filter';
 import UserCard from '@/components/UserCard';
 import UserDetails from '@/components/UserDetails';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
