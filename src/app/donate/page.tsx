@@ -19,7 +19,8 @@ import AddIcon from '@mui/icons-material/Add';
 import { addDonation } from '@/api/firebase-donations';
 import { addErrorEvent } from '@/api/firebase';
 import { uploadImages } from '@/api/firebase-images';
-import { loginAnonymousUser, signOutUser } from '@/api/firebase-users';
+import { loginAnonymousUser } from '@/api/firebase-users';
+import { signOutEverywhere } from '@/lib/sign-out';
 //Constants
 import { donationDisclaimer } from '@/data/agreements';
 //styles
@@ -51,10 +52,9 @@ export default function Donate() {
 
     const isDisabled = emailsDoNotMatch || donorName.length === 0;
 
-    const handleClose = () => {
-        signOutUser();
-        router.push('/');
+    const handleClose = async () => {
         setIsDialogOpen(false);
+        await signOutEverywhere(router); // signs out the anonymous donor session and navigates home
     };
 
     const handleEditName = () => {

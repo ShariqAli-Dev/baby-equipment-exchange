@@ -6,10 +6,11 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import Drawer from '@mui/material/Drawer';
 //Hooks
+import { useRouter } from 'next/navigation';
 import { useUserContext } from '@/contexts/UserContext';
 import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 //Libs
-import { signOutUser } from '@/api/firebase-users';
+import { signOutEverywhere } from '@/lib/sign-out';
 //styles
 import styles from './NavMenu.module.css';
 
@@ -22,12 +23,11 @@ interface Props {
 export default function NavMenu({ isOpen, handleIsOpen, closeMenu }: Props) {
     const { currentUser } = useUserContext();
     const { clearPendingDonations } = usePendingDonationsContext();
+    const router = useRouter();
 
-    const handleSignOut = () => {
+    const handleSignOut = async () => {
         clearPendingDonations();
-        localStorage.clear();
-        signOutUser();
-        window.location.reload();
+        await signOutEverywhere(router);
     };
 
     return (
@@ -65,9 +65,12 @@ export default function NavMenu({ isOpen, handleIsOpen, closeMenu }: Props) {
                         className={styles['menu__link']}
                         id="signout"
                         href={currentUser ? '/' : '/login'}
-                        onClick={() => {
+                        onClick={(event) => {
                             closeMenu();
-                            if (currentUser) handleSignOut();
+                            if (currentUser) {
+                                event.preventDefault(); // signOutEverywhere owns navigation
+                                void handleSignOut();
+                            }
                         }}
                     >
                         {currentUser ? <span>Log Out</span> : <span>Login</span>}

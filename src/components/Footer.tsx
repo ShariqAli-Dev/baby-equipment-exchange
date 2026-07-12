@@ -1,11 +1,12 @@
 'use client';
 //Hooks
+import { useRouter } from 'next/navigation';
 import { useUserContext } from '@/contexts/UserContext';
 import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 //Components
 import Link from 'next/link';
 //Libs
-import { signOutUser } from '@/api/firebase-users';
+import { signOutEverywhere } from '@/lib/sign-out';
 //Styles
 import styles from './Footer.module.css';
 import { Typography } from '@mui/material';
@@ -13,12 +14,11 @@ import { Typography } from '@mui/material';
 export default function Footer() {
     const { currentUser } = useUserContext();
     const { clearPendingDonations } = usePendingDonationsContext();
+    const router = useRouter();
 
-    const handleSignOut = () => {
+    const handleSignOut = async () => {
         clearPendingDonations();
-        localStorage.clear();
-        signOutUser();
-        window.location.reload();
+        await signOutEverywhere(router);
     };
 
     return (
@@ -37,8 +37,11 @@ export default function Footer() {
                     className={styles['menu__link']}
                     id="signout"
                     href={currentUser ? '/' : '/login'}
-                    onClick={() => {
-                        if (currentUser) handleSignOut();
+                    onClick={(event) => {
+                        if (currentUser) {
+                            event.preventDefault(); // signOutEverywhere owns navigation
+                            void handleSignOut();
+                        }
                     }}
                 >
                     {currentUser ? 'Sign Out' : 'Login'}

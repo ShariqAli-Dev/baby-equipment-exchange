@@ -226,8 +226,8 @@ export async function signInAuthUserWithEmailAndPassword(email: string, password
     return userCredential.user;
 }
 
-export function signOutUser(): void {
-    signOut(auth);
+export async function signOutUser(): Promise<void> {
+    await signOut(auth);
 }
 
 export function onAuthStateChangedListener(callback: NextOrObserver<User>) {
