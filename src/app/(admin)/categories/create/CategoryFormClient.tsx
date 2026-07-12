@@ -1,28 +1,21 @@
 'use client';
 
 //Hooks
-import { Dispatch, SetStateAction, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 //Components
-import ProtectedAdminRoute from './ProtectedAdminRoute';
-import { Box, Button, IconButton, TextField, Typography } from '@mui/material';
-import CustomDialog from './CustomDialog';
-import Loader from './Loader';
+import { Box, Button, TextField, Typography } from '@mui/material';
+import CustomDialog from '@/components/CustomDialog';
+import Loader from '@/components/Loader';
 //API
-import { addCategory } from '@/api/firebase-categories';
 import { addErrorEvent } from '@/api/firebase';
-//Icons
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { addCategoryAction } from '@/server/actions/categories';
+//Styles
+import '@/styles/globalStyles.css';
+//Types
 import { categoryBody } from '@/types/CategoryTypes';
 
-type CategoryFormProps = {
-    setShowForm?: Dispatch<SetStateAction<boolean>>;
-    setCategoriesUpdated?: Dispatch<SetStateAction<boolean>>;
-};
-
-const CategoryForm = (props: CategoryFormProps) => {
-    const { setShowForm, setCategoriesUpdated } = props;
-
+export default function CategoryFormClient() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [name, setName] = useState<string>('');
     const [tagPrefix, setTagPrefix] = useState<string>('');
@@ -32,14 +25,9 @@ const CategoryForm = (props: CategoryFormProps) => {
     const router = useRouter();
 
     const handleClose = () => {
-        if (setCategoriesUpdated) setCategoriesUpdated(true);
-        if (setShowForm) {
-            setIsDialogOpen(false);
-            setShowForm(false);
-        } else {
-            setIsDialogOpen(false);
-            router.push('/categories');
-        }
+        setIsDialogOpen(false);
+        // L12 fixed: /categories exists now, so landing there after create works.
+        router.push('/categories');
     };
 
     const handleSubmit = async (event: React.FormEvent): Promise<void> => {
@@ -51,7 +39,7 @@ const CategoryForm = (props: CategoryFormProps) => {
                 tagPrefix: tagPrefix,
                 description: description
             };
-            await addCategory(categoryToCreate);
+            await addCategoryAction(categoryToCreate);
             setIsDialogOpen(true);
         } catch (error) {
             addErrorEvent('Error submitting new category: ', error);
@@ -62,14 +50,9 @@ const CategoryForm = (props: CategoryFormProps) => {
     };
 
     return (
-        <ProtectedAdminRoute>
+        <>
             <div className="page--header">
                 <Typography variant="h5">Create Category</Typography>
-                {setShowForm && (
-                    <IconButton onClick={() => setShowForm(false)}>
-                        <ArrowBackIcon />
-                    </IconButton>
-                )}
             </div>
 
             {isLoading && <Loader />}
@@ -108,11 +91,9 @@ const CategoryForm = (props: CategoryFormProps) => {
                         <Button variant="contained" type="submit" disabled={name.length === 0 || tagPrefix.length === 0}>
                             Create Category
                         </Button>
-                        {setShowForm && (
-                            <Button variant="outlined" type="button" onClick={() => setShowForm(false)}>
-                                Cancel
-                            </Button>
-                        )}
+                        <Button variant="outlined" type="button" onClick={() => router.push('/categories')}>
+                            Cancel
+                        </Button>
                     </Box>
                     <CustomDialog
                         isOpen={isDialogOpen}
@@ -122,8 +103,6 @@ const CategoryForm = (props: CategoryFormProps) => {
                     />
                 </div>
             )}
-        </ProtectedAdminRoute>
+        </>
     );
-};
-
-export default CategoryForm;
+}
