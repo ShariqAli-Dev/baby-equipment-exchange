@@ -24,17 +24,22 @@ export function useFilterParams() {
 
     const getListParam = useCallback((key: string): string[] => parseListParam(searchParams.getAll(key)), [searchParams]);
 
-    const setParam = useCallback(
-        (key: string, value: string | string[] | null) => {
+    // Multi-key variant: updates land in ONE router.replace. Two back-to-back
+    // setParam calls would race — each snapshots searchParams before the other's
+    // replace commits, so the second would clobber the first.
+    const setParams = useCallback(
+        (updates: Record<string, string | string[] | null>) => {
             const params: Record<string, string | string[] | null> = {};
             searchParams.forEach((existingValue, existingKey) => {
                 params[existingKey] = existingValue;
             });
-            params[key] = value;
+            Object.assign(params, updates);
             router.replace(`${pathname}${buildQueryString(params)}`, { scroll: false });
         },
         [router, pathname, searchParams]
     );
+
+    const setParam = useCallback((key: string, value: string | string[] | null) => setParams({ [key]: value }), [setParams]);
 
     // For text inputs: debounced so typing doesn't push a history entry per keystroke.
     const setTextParam = useCallback(
@@ -45,5 +50,5 @@ export function useFilterParams() {
         [setParam]
     );
 
-    return { getParam, getListParam, setParam, setTextParam };
+    return { getParam, getListParam, setParam, setParams, setTextParam };
 }

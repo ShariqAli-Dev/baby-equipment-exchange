@@ -1,42 +1,39 @@
 'use client';
 
 //Hooks
-import { ChangeEvent, Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import { renderToString } from 'react-dom/server';
 import { useRouter } from 'next/navigation';
 //Components
-import DonationCardSmall from './DonationCardSmall';
-import ProtectedAdminRoute from './ProtectedAdminRoute';
+import DonationCardSmall from '@/components/DonationCardSmall';
 import { Box, Button, FormControl, InputLabel, NativeSelect, TextField } from '@mui/material';
-import CustomDialog from './CustomDialog';
+import CustomDialog from '@/components/CustomDialog';
+import Loader from '@/components/Loader';
 //Api
-import { getSchedulingPageLink } from '@/api/calendly';
 import { addErrorEvent } from '@/api/firebase';
 import sendMail from '@/api/nodemailer';
-import { closeOrder, updateDonationStatus } from '@/api/firebase-donations';
-//styles
+import { closeOrderAction } from '@/server/actions/orders';
+import { updateDonationStatusAction } from '@/server/actions/donations';
+//Styles
 import '@/styles/globalStyles.css';
-//types
-import { Order } from '@/types/OrdersTypes';
-import { EventType } from '@/types/CalendlyTypes';
-import Loader from './Loader';
+//Types
+import type { OrderDTO } from '@/server/orders';
+import type { EventType } from '@/types/CalendlyTypes';
 
 import schedulePickup from '@/email-templates/schedulePickup';
 
-type SchedulePickupProps = {
-    order: Order;
-    setShowScheduler: Dispatch<SetStateAction<boolean>>;
-    setNotificationsUpdated?: Dispatch<SetStateAction<boolean>>;
+type SchedulePickupViewProps = {
+    order: OrderDTO;
+    // Calendly calendars, fetched by the server page.
+    events: EventType[];
 };
 
-const SchedulePickup = (props: SchedulePickupProps) => {
-    const { order, setShowScheduler, setNotificationsUpdated } = props;
+const SchedulePickupView = (props: SchedulePickupViewProps) => {
+    const { order, events } = props;
     const { requestor, id, items, rejectedItems } = order;
     const router = useRouter();
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(true);
-    const [events, setEvents] = useState<EventType[] | null>(null);
     const [inviteUrl, setInviteUrl] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
@@ -64,11 +61,11 @@ const SchedulePickup = (props: SchedulePickupProps) => {
             if (!allRejected) {
                 await Promise.all(
                     items.map(async (item) => {
-                        await updateDonationStatus(item.id, 'reserved');
+                        await updateDonationStatusAction(item.id, 'reserved');
                     })
                 );
             }
-            await closeOrder(id);
+            await closeOrderAction(id);
             sendMail(emailMsg);
             setIsDialogOpen(true);
         } catch (error) {
@@ -78,24 +75,11 @@ const SchedulePickup = (props: SchedulePickupProps) => {
         }
     };
 
-    const fetchEvents = async () => {
-        setIsLoadingEvents(true);
-        try {
-            const eventResult = await getSchedulingPageLink();
-            setEvents(eventResult ?? []);
-        } catch (error) {
-            addErrorEvent('Fetch Calendly Scheduling Links', error);
-            setEvents([]);
-        } finally {
-            setIsLoadingEvents(false);
-        }
-    };
-
     const message = allRejected ? (
         <>
             <p>{`Hello ${requestor.name}`}</p>
             <p>Unfortunately, none of the items you requested are currently available:</p>
-            {rejectedItems && rejectedItems.length > 0 && (
+            {rejectedItems.length > 0 && (
                 <>
                     {rejectedItems.map((item) => (
                         <DonationCardSmall key={item.id} donation={item} />
@@ -111,10 +95,10 @@ const SchedulePickup = (props: SchedulePickupProps) => {
             {items.map((item) => (
                 <DonationCardSmall key={item.id} donation={item} />
             ))}
-            {rejectedItems && rejectedItems.length > 0 && (
+            {rejectedItems.length > 0 && (
                 <>
                     <p>Unfortunately, the following items you requested are no longer available:</p>
-                    {rejectedItems?.map((item) => (
+                    {rejectedItems.map((item) => (
                         <DonationCardSmall key={item.id} donation={item} />
                     ))}
                 </>
@@ -122,15 +106,8 @@ const SchedulePickup = (props: SchedulePickupProps) => {
         </>
     );
 
-    useEffect(() => {
-        if (!allRejected) {
-            fetchEvents();
-        } else {
-            setIsLoadingEvents(false);
-        }
-    }, [allRejected]);
     return (
-        <ProtectedAdminRoute>
+        <>
             <div className="page--header">
                 <h3>{allRejected ? 'Send Rejection Email' : 'Send Pickup Email'}</h3>
             </div>
@@ -159,25 +136,13 @@ const SchedulePickup = (props: SchedulePickupProps) => {
                                     <InputLabel variant="standard" htmlFor="location" shrink={true}>
                                         Select calendar for accepted donations
                                     </InputLabel>
-                                    <NativeSelect
-                                        variant="outlined"
-                                        name="location"
-                                        id="location"
-                                        onChange={handleSelect}
-                                        value={inviteUrl}
-                                        disabled={isLoadingEvents}
-                                    >
-                                        <option value="">{isLoadingEvents ? 'Loading calendars...' : 'Send without calendar invite'}</option>
-                                        {events &&
-                                            events.map((event, index) => {
-                                                if (event.active === true) {
-                                                    return (
-                                                        <option key={index} value={event.scheduling_url}>
-                                                            {event.name}
-                                                        </option>
-                                                    );
-                                                }
-                                            })}
+                                    <NativeSelect variant="outlined" name="location" id="location" onChange={handleSelect} value={inviteUrl}>
+                                        <option value="">Send without calendar invite</option>
+                                        {events.map((event, index) => (
+                                            <option key={index} value={event.scheduling_url}>
+                                                {event.name}
+                                            </option>
+                                        ))}
                                     </NativeSelect>
                                 </FormControl>
                             )}
@@ -185,7 +150,7 @@ const SchedulePickup = (props: SchedulePickupProps) => {
                                 <Button variant="contained" onClick={handleSubmit}>
                                     {allRejected ? 'Send Rejection Email' : 'Send Pickup Email'}
                                 </Button>
-                                <Button variant="outlined" onClick={() => setShowScheduler(false)}>
+                                <Button variant="outlined" onClick={() => router.push(`/review-order/${id}`)}>
                                     Cancel
                                 </Button>
                             </Box>
@@ -194,8 +159,8 @@ const SchedulePickup = (props: SchedulePickupProps) => {
                 </>
             )}
             <CustomDialog isOpen={isDialogOpen} onClose={handleClose} title="Email sent" content={`Email successfully sent to ${requestor.email}`} />
-        </ProtectedAdminRoute>
+        </>
     );
 };
 
-export default SchedulePickup;
+export default SchedulePickupView;

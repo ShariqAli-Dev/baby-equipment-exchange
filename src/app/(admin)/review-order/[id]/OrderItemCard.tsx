@@ -1,7 +1,8 @@
 'use client';
 
 //Hooks
-import { Dispatch, SetStateAction, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 //Components
 import {
     Box,
@@ -28,21 +29,17 @@ import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart';
 import BlockIcon from '@mui/icons-material/Block';
 //Styles
 import '@/styles/globalStyles.css';
-//types
-import { Donation } from '@/models/donation';
-import { IUser } from '@/models/user';
-import type { OrderItemRejectionResolution } from '@/api/firebase-donations';
+//Types
+import type { DonationDTO } from '@/server/donations';
+import type { OrderItemRejectionResolution } from '@/server/orders';
+import type { UserDTO } from '@/server/users';
 
-type DonationCardMedProps = {
-    orderId: string;
-    donation: Donation;
-    setIdToDisplay: Dispatch<SetStateAction<string | null>>;
-    handleRemoveFromOrder?: (orderId: string, donation: Donation, resolution: OrderItemRejectionResolution) => Promise<void>;
+type OrderItemCardProps = {
+    donation: DonationDTO;
+    // Reassignment candidates, server-provided by the review-order page.
+    activeUsers: UserDTO[];
+    onRemove?: (donationId: string, resolution: OrderItemRejectionResolution) => Promise<void>;
     showRemoveButton?: boolean;
-    // Reassignment candidates come from the parent (server-provided once the
-    // orders vertical migrates) instead of a lazy in-card fetch.
-    activeUsers?: IUser[];
-    isLoadingUsers?: boolean;
 };
 
 type RejectionAction = OrderItemRejectionResolution['action'];
@@ -73,17 +70,18 @@ const rejectionOptions: {
     }
 ];
 
-const DonationCardMed = (props: DonationCardMedProps) => {
-    const { orderId, donation, setIdToDisplay, handleRemoveFromOrder, showRemoveButton = true, activeUsers = [], isLoadingUsers = false } = props;
+const OrderItemCard = (props: OrderItemCardProps) => {
+    const { donation, activeUsers, onRemove, showRemoveButton = true } = props;
+    const router = useRouter();
     const [showRemoveDialog, setShowRemoveDialog] = useState<boolean>(false);
     const [rejectionAction, setRejectionAction] = useState<RejectionAction>('available');
-    const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
+    const [selectedUser, setSelectedUser] = useState<UserDTO | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     const availableUsers = useMemo(() => activeUsers.filter((user) => user.uid !== donation.requestor?.id), [activeUsers, donation.requestor?.id]);
 
-    const handleRemove = async (id: string, donation: Donation) => {
-        if (!handleRemoveFromOrder) return;
+    const handleRemove = async () => {
+        if (!onRemove) return;
 
         let resolution: OrderItemRejectionResolution;
         if (rejectionAction === 'requested') {
@@ -92,8 +90,8 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                 action: 'requested',
                 requestor: {
                     id: selectedUser.uid,
-                    name: selectedUser.displayName,
-                    email: selectedUser.email
+                    name: selectedUser.displayName ?? '',
+                    email: selectedUser.email ?? ''
                 }
             };
         } else {
@@ -102,7 +100,7 @@ const DonationCardMed = (props: DonationCardMedProps) => {
 
         setIsSubmitting(true);
         try {
-            await handleRemoveFromOrder(id, donation, resolution);
+            await onRemove(donation.id, resolution);
             setShowRemoveDialog(false);
         } finally {
             setIsSubmitting(false);
@@ -112,8 +110,8 @@ const DonationCardMed = (props: DonationCardMedProps) => {
     return (
         <>
             <Card className="card--container" raised>
-                <CardActions className="card--container-image" onClick={() => setIdToDisplay(donation.id)}>
-                    {donation.images && donation.images.length > 0 && <CardMedia component="img" alt={donation.model} image={donation.images[0]} />}
+                <CardActions className="card--container-image" onClick={() => router.push(`/donations/${donation.id}`)} sx={{ cursor: 'pointer' }}>
+                    {donation.images.length > 0 && <CardMedia component="img" alt={donation.model ?? ''} image={donation.images[0]} />}
                 </CardActions>
                 <CardContent>
                     <Typography variant="h5">
@@ -122,7 +120,7 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                     <Typography variant="h6">{donation.tagNumber}</Typography>
                 </CardContent>
 
-                {showRemoveButton && handleRemoveFromOrder && orderId && (
+                {showRemoveButton && onRemove && (
                     <CardActions>
                         <Button variant="contained" startIcon={<RemoveShoppingCartIcon />} color="error" onClick={() => setShowRemoveDialog(true)}>
                             Reject
@@ -130,7 +128,7 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                     </CardActions>
                 )}
             </Card>
-            {handleRemoveFromOrder && orderId && (
+            {onRemove && (
                 <Dialog
                     open={showRemoveDialog}
                     onClose={() => setShowRemoveDialog(false)}
@@ -198,7 +196,6 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                                         setSelectedUser(user);
                                     }}
                                 >
-                                    {isLoadingUsers && <MenuItem disabled>Loading users…</MenuItem>}
                                     {availableUsers.map((user) => (
                                         <MenuItem key={user.uid} value={user.uid}>
                                             {user.displayName} ({user.email})
@@ -218,7 +215,7 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                         </Button>
                         <Button
                             variant="contained"
-                            onClick={() => handleRemove(orderId, donation)}
+                            onClick={handleRemove}
                             disabled={isSubmitting || (rejectionAction === 'requested' && !selectedUser)}
                             sx={{ textTransform: 'none' }}
                         >
@@ -231,4 +228,4 @@ const DonationCardMed = (props: DonationCardMedProps) => {
     );
 };
 
-export default DonationCardMed;
+export default OrderItemCard;
