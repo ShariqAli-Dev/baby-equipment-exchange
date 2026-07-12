@@ -19,9 +19,27 @@ interface Props {
     closeMenu: () => void;
 }
 
+// Canonical routes surfaced per role (Dashboard's tab lattice is gone — the
+// drawer is now the admin/aid-worker nav).
+const ADMIN_LINKS = [
+    { href: '/notifications', label: 'Notifications' },
+    { href: '/donations', label: 'Donations' },
+    { href: '/inventory', label: 'Inventory' },
+    { href: '/users', label: 'Users' },
+    { href: '/organizations', label: 'Organizations' },
+    { href: '/categories', label: 'Categories' }
+];
+const AID_WORKER_LINKS = [
+    { href: '/inventory', label: 'Inventory' },
+    { href: '/inventory-cart', label: 'Cart' }
+];
+
 export default function NavMenu({ isOpen, handleIsOpen, closeMenu }: Props) {
-    const { currentUser } = useUserContext();
+    const { currentUser, isAdmin, isAidWorker } = useUserContext();
     const router = useRouter();
+
+    // Admins hold the aid-worker superset but get the full admin nav.
+    const roleLinks = isAdmin ? ADMIN_LINKS : isAidWorker ? AID_WORKER_LINKS : [];
 
     const handleSignOut = async () => {
         // Draft cleanup: signOutEverywhere clears localStorage, and the (donate)-scoped
@@ -42,6 +60,11 @@ export default function NavMenu({ isOpen, handleIsOpen, closeMenu }: Props) {
                     <Link className={styles['menu__link']} id="home" href="/" onClick={closeMenu}>
                         <span>Home</span>
                     </Link>
+                    {roleLinks.map((link) => (
+                        <Link key={link.href} className={styles['menu__link']} href={link.href} onClick={closeMenu}>
+                            <span>{link.label}</span>
+                        </Link>
+                    ))}
                     {currentUser && (
                         <>
                             <Link className={styles['menu__link']} id="donate" href="/donate" onClick={closeMenu}>

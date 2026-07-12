@@ -1,29 +1,17 @@
-'use client';
-
-//Hooks
-import { useUserContext } from '@/contexts/UserContext';
 import { redirect } from 'next/navigation';
 
-//Components
+import { getSession } from '@/server/auth/get-session';
 import HomePage from '@/components/HomePage';
-import Loader from '@/components/Loader';
-import Dashboard from '@/components/Dashboard';
-import Inventory from '@/components/Inventory';
 
-export default function Home() {
-    const { isAdmin, isAidWorker } = useUserContext();
+// Server-side landing gate (replaces the client isAdmin/isAidWorker branch that
+// always fell through to HomePage — L14). Admins and aid-workers are sent to
+// their canonical section; everyone else (anonymous or plain donor) sees the
+// public marketing home.
+export default async function Home() {
+    const session = await getSession();
 
-    if (isAdmin) {
-        return <Dashboard />;
-    }
+    if (session?.isAdmin) redirect('/notifications');
+    if (session?.isAidWorker) redirect('/inventory');
 
-    if (isAidWorker) {
-        return <Inventory />;
-    }
-
-    if (!isAdmin || !isAidWorker) {
-        return <HomePage />;
-    }
-
-    return <Loader />;
+    return <HomePage />;
 }
