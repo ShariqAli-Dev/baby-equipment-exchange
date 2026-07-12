@@ -9,8 +9,9 @@ import { db } from '../firebase-admin';
 import { requireAdmin, requireAidWorkerOrAdmin } from '../auth/guards';
 import { omitNullish } from '../serialize';
 import { deleteImagesByUrls } from '../images';
-import { DONATIONS_COLLECTION } from '../donations';
+import { DONATIONS_COLLECTION, areDonationsAvailable } from '../donations';
 import { ORDERS_COLLECTION, getOrderById, type OrderDTO } from '../orders';
+import { getTagNumberAction } from './categories';
 
 import type { DonationBody } from '@/types/post-data';
 import type { AdminDonationBody } from '@/types/DonationTypes';
@@ -137,6 +138,29 @@ export async function deleteDonationAction(id: string): Promise<void> {
     await deleteImagesByUrls(images);
     await ref.delete();
     revalidateDonationViews(id);
+}
+
+// Client-callable wrapper over the availability read — the carts (client
+// components) check items right before submitting an order.
+export async function areDonationsAvailableAction(inventoryItemIds: string[]): Promise<string[]> {
+    return areDonationsAvailable(inventoryItemIds);
+}
+
+// Accepting a donation in the drop-off flow: assign a tag number and flip to
+// 'pending delivery' with a server-stamped dateAccepted (the old client flow
+// passed serverTimestamp() from the browser SDK). Returns the tag number for
+// the accept email.
+export async function acceptDonationAction(id: string, category: string): Promise<string> {
+    await requireAdmin();
+    const tagNumber = await getTagNumberAction(category);
+    await db.collection(DONATIONS_COLLECTION).doc(id).update({
+        status: 'pending delivery',
+        dateAccepted: FieldValue.serverTimestamp(),
+        tagNumber,
+        modifiedAt: FieldValue.serverTimestamp()
+    });
+    revalidateDonationViews(id);
+    return tagNumber;
 }
 
 // Aid-worker cart submission (mirrors requestInventoryItems).

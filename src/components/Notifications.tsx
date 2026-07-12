@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 //Components
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import UserDetails from '@/components/UserDetails';
-import ReviewOrder from './ReviewOrder';
 import NotificationCard from '@/components/NotificationCard';
 import { Box, Button, Chip, Divider, InputAdornment, Paper, Tab, Tabs, TextField, Typography } from '@mui/material';
 import CustomTabPanel from './CustomTabPanel';
@@ -130,7 +129,6 @@ const Notifications = (props: NotificationsProps) => {
     const { notifications, setNotificationsUpdated } = props;
 
     const [userIdToDisplay, setUserIdToDisplay] = useState<string | null>(null);
-    const [orderIdToDisplay, setOrderIdToDisplay] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<number>(0);
     const [searchInput, setSearchInput] = useState<string>('');
 
@@ -225,14 +223,7 @@ const Notifications = (props: NotificationsProps) => {
     return (
         <ProtectedAdminRoute>
             {userIdToDisplay && <UserDetails id={userIdToDisplay} setIdToDisplay={setUserIdToDisplay} />}
-            {orderIdToDisplay && (
-                <ReviewOrder
-                    id={orderIdToDisplay}
-                    setIdToDisplay={setOrderIdToDisplay}
-                    setNotificationsUpdated={setNotificationsUpdated}
-                />
-            )}
-            {!userIdToDisplay && !orderIdToDisplay && (
+            {!userIdToDisplay && (
                 <>
                     {notifications.donations.length === 0 && notifications.orders.length === 0 && notifications.users.length === 0 ? (
                         <Typography sx={{ marginTop: '1rem' }} variant="body1">
@@ -407,7 +398,7 @@ const Notifications = (props: NotificationsProps) => {
                                                     <Button
                                                         className={styles['notification-card--container--btn']}
                                                         variant="contained"
-                                                        onClick={() => setOrderIdToDisplay(group.orders[0].id)}
+                                                        onClick={() => router.push(`/review-order/${group.orders[0].id}`)}
                                                     >
                                                         Review
                                                     </Button>
@@ -424,7 +415,7 @@ const Notifications = (props: NotificationsProps) => {
                                                             <Button
                                                                 size="small"
                                                                 variant="contained"
-                                                                onClick={() => setOrderIdToDisplay(order.id)}
+                                                                onClick={() => router.push(`/review-order/${order.id}`)}
                                                             >
                                                                 Review
                                                             </Button>
