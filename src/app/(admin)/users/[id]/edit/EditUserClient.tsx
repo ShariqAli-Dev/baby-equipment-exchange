@@ -1,36 +1,38 @@
 'use client';
 
 //Hooks
-import { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 //API
-import { callGetOrganizationNames, addErrorEvent, callIsEmailInUse, callSetClaims, callUpdateAuthUser, callEnableUser } from '@/api/firebase';
+import { addErrorEvent } from '@/api/firebase';
 import sendMail from '@/api/nodemailer';
-import { enableDbUser, updateDbUser } from '@/api/firebase-users';
+import { enableUserAction, isEmailInUseAction, updateAuthUserAction, updateDbUserAction } from '@/server/actions/users';
+import { setClaims } from '@/server/claims';
 //Components
 import { Paper, Box, FormControl, Autocomplete, TextField, Button, FormLabel, RadioGroup, FormControlLabel, Radio, Typography } from '@mui/material';
 import Loader from '@/components/Loader';
-import CustomDialog from './CustomDialog';
-import ProtectedAdminRoute from './ProtectedAdminRoute';
+import CustomDialog from '@/components/CustomDialog';
 //Constants
 import userEnabled from '@/email-templates/userEnabled';
 //Styles
 import '@/styles/globalStyles.css';
 //Types
 import { PatternFormat, OnValueChange } from 'react-number-format';
-
-import { UserCollection } from '@/models/user';
+import type { UserDTO } from '@/server/users';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type EditUserProps = {
-    userDetails: UserCollection;
-    setIsEditMode: Dispatch<SetStateAction<boolean>>;
-    setUserDetailsUpdated?: Dispatch<SetStateAction<boolean>>;
+type EditUserClientProps = {
+    user: UserDTO;
+    orgNamesAndIds: { [name: string]: string };
 };
 
-const EditUser = (props: EditUserProps) => {
-    const { uid, email, displayName, customClaims, phoneNumber, notes, organization, isDisabled, title } = props.userDetails;
-    const { setIsEditMode, setUserDetailsUpdated } = props;
+export default function EditUserClient({ user, orgNamesAndIds }: EditUserClientProps) {
+    const { uid, customClaims, isDisabled, organization } = user;
+    const email = user.email ?? '';
+    const displayName = user.displayName ?? '';
+    const phoneNumber = user.phoneNumber ?? '';
+    const title = user.title ?? '';
 
     let initialRole = '';
     if (customClaims && customClaims.admin === true) {
@@ -45,37 +47,20 @@ const EditUser = (props: EditUserProps) => {
     const [isEmailInUse, setIsEmailInUse] = useState<boolean>(false);
     const [isInvalidEmail, setIsInvalidEmail] = useState<boolean>(false);
     const [newPhoneNumber, setNewPhoneNumber] = useState<string>(phoneNumber);
-    const [newTitle, setNewTitle] = useState<string>(title ?? '');
+    const [newTitle, setNewTitle] = useState<string>(title);
     const [role, setRole] = useState<string>(initialRole);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-    const handleClose = () => {
-        if (setUserDetailsUpdated) setUserDetailsUpdated(true);
-        setIsDialogOpen(false);
-        setIsEditMode(false);
-    };
-
-    //List of Org names, ids from Server
-    const [orgNamesAndIds, setOrgNamesAndIds] = useState<{
-        [key: string]: string;
-    }>({});
+    const router = useRouter();
 
     const orgNames = Object.keys(orgNamesAndIds);
-
     const initialOrg: string | null = organization ? organization.name : null;
-
     const [selectedOrg, setSelectedOrg] = useState<string | null>(initialOrg);
 
-    const getOrgNames = async (): Promise<void> => {
-        setIsLoading(true);
-        try {
-            const organizationNamesResult = await callGetOrganizationNames();
-            setOrgNamesAndIds(organizationNamesResult);
-        } catch (error) {
-            addErrorEvent('Could not fetch org names', error);
-        } finally {
-            setIsLoading(false);
-        }
+    const handleClose = () => {
+        setIsDialogOpen(false);
+        // Actions already revalidated /users and /users/[id]; land on the detail view.
+        router.push(`/users/${uid}`);
     };
 
     const validateEmail = (email: string): void => {
@@ -88,14 +73,14 @@ const EditUser = (props: EditUserProps) => {
 
     const handleEmailInput = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
         setNewEmail(event.target.value);
-        validateEmail(newEmail);
+        validateEmail(event.target.value);
     };
 
     const handleBlur = async (): Promise<void> => {
         validateEmail(newEmail);
-        //Only check if email is valid if different from inital email value
+        //Only check if email is in use if different from initial email value
         if (!isInvalidEmail && newEmail !== email) {
-            const emailInUse = await callIsEmailInUse(newEmail);
+            const emailInUse = await isEmailInUseAction(newEmail);
             setIsEmailInUse(emailInUse);
         }
     };
@@ -115,7 +100,7 @@ const EditUser = (props: EditUserProps) => {
             //If account is inactive, activate and send confirmation email
             if (isDisabled) {
                 try {
-                    await Promise.all([callEnableUser(uid), enableDbUser(uid)]);
+                    await enableUserAction(uid);
                     const emailMsg = userEnabled(email, displayName);
                     await sendMail(emailMsg);
                 } catch (error) {
@@ -125,7 +110,7 @@ const EditUser = (props: EditUserProps) => {
             //if any fields stored in the firebase auth user have changed, update auth user.
             if (email !== newEmail || displayName !== newDisplayName) {
                 try {
-                    const updatedAuthUser = await callUpdateAuthUser(uid, {
+                    await updateAuthUserAction(uid, {
                         email: newEmail,
                         displayName: newDisplayName
                     });
@@ -133,11 +118,11 @@ const EditUser = (props: EditUserProps) => {
                     addErrorEvent('Error updating email or display name', error);
                 }
             }
-            //If user role has changed it requires a separate API call
+            //If user role has changed it requires a separate API call.
+            //setClaims also mirrors the claims onto the Users doc.
             if (role !== initialRole) {
                 try {
-                    const claims = { [`${role}`]: true };
-                    await Promise.all([callSetClaims(uid, claims), updateDbUser(uid, { customClaims: claims })]);
+                    await setClaims(uid, { [`${role}`]: true });
                 } catch (error) {
                     addErrorEvent('Error updated custom claims', error);
                 }
@@ -152,7 +137,7 @@ const EditUser = (props: EditUserProps) => {
                           }
                         : null;
 
-                    await updateDbUser(uid, {
+                    await updateDbUserAction(uid, {
                         phoneNumber: newPhoneNumber,
                         organization: updatedOrganization,
                         title: newTitle,
@@ -173,12 +158,9 @@ const EditUser = (props: EditUserProps) => {
         }
     };
 
-    useEffect(() => {
-        getOrgNames();
-    }, []);
-
     return (
-        <ProtectedAdminRoute>
+        <div className="page--header">
+            <h3>Edit User</h3>
             <Paper className="content--container" elevation={8} square={false}>
                 {isLoading ? (
                     <Loader />
@@ -260,7 +242,7 @@ const EditUser = (props: EditUserProps) => {
                                 </Button>
                             )}
 
-                            <Button variant="outlined" type="button" onClick={() => setIsEditMode(false)}>
+                            <Button variant="outlined" type="button" onClick={() => router.push(`/users/${uid}`)}>
                                 Cancel
                             </Button>
                         </Box>
@@ -268,8 +250,6 @@ const EditUser = (props: EditUserProps) => {
                 )}
             </Paper>
             <CustomDialog isOpen={isDialogOpen} onClose={handleClose} title="User updated" content={`The user ${newDisplayName} has been updated.`} />
-        </ProtectedAdminRoute>
+        </div>
     );
-};
-
-export default EditUser;
+}

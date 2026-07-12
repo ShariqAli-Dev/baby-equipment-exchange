@@ -7,7 +7,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { auth, db } from '../firebase-admin';
 import { requireAdmin, requireSelfOrAdmin } from '../auth/guards';
-import { USERS_COLLECTION } from '../users';
+import { USERS_COLLECTION, isEmailInUse } from '../users';
 
 import type { AccountInformation } from '@/types/UserTypes';
 
@@ -56,4 +56,11 @@ export async function updateDbUserAction(uid: string, accountInformation: Record
         .doc(uid)
         .update({ ...accountInformation, modifiedAt: FieldValue.serverTimestamp() });
     revalidateUserViews(uid);
+}
+
+// Client-callable wrapper for the isEmailInUse read (client components can't
+// import the server-only module). Unauthenticated by design — pre-auth signup
+// validates emails with it, same exposure as the old isemailinuse callable.
+export async function isEmailInUseAction(email: string): Promise<boolean> {
+    return isEmailInUse(email);
 }

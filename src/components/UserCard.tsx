@@ -1,26 +1,32 @@
 'use client';
-//Hooks
-import React, { Dispatch, SetStateAction } from 'react';
-//Components
-import { ListItem, ListItemButton, ListItemText, Typography } from '@mui/material';
 
+//Components
+import Link from 'next/link';
+import { ListItem, ListItemButton, ListItemText } from '@mui/material';
 //Styles
 import '@/styles/globalStyles.css';
-//Types
-import { IUser } from '@/models/user';
 
-type UserCardProps = {
-    user: IUser;
-    setIdToDisplay: Dispatch<SetStateAction<string | null>>;
+// Serializable card shape so server pages can render the list
+// (both UserDTO projections and the legacy IUser satisfy it).
+export type UserCardData = {
+    uid: string;
+    displayName: string | null;
+    email: string | null;
+    organizationName: string | null;
+    isDisabled: boolean | null | undefined;
 };
 
-export default function UserCard(props: UserCardProps) {
-    const { uid, email, displayName, customClaims, isDisabled, phoneNumber, organization } = props.user;
-    const setIdToDisplay = props.setIdToDisplay;
+type UserCardProps = {
+    user: UserCardData;
+    href: string;
+};
+
+export default function UserCard({ user, href }: UserCardProps) {
+    const { uid, email, displayName, organizationName, isDisabled } = user;
 
     return (
-        <ListItem key={uid!} sx={!isDisabled ? { background: 'white', border: '1px solid black' } : { background: 'white', border: '1px solid red' }}>
-            <ListItemButton component="a" onClick={() => setIdToDisplay(uid)} sx={{}}>
+        <ListItem key={uid} sx={!isDisabled ? { background: 'white', border: '1px solid black' } : { background: 'white', border: '1px solid red' }}>
+            <ListItemButton component={Link} href={href}>
                 <ListItemText
                     primary={
                         <p>
@@ -29,7 +35,7 @@ export default function UserCard(props: UserCardProps) {
                     }
                     secondary={
                         <>
-                            <i>{organization?.name ?? 'None assigned'}</i>
+                            <i>{organizationName ?? 'None assigned'}</i>
                         </>
                     }
                     sx={{ color: 'black' }}
