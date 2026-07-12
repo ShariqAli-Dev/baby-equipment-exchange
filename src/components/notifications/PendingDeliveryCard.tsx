@@ -19,7 +19,7 @@ const toDateString = (iso: string | null): string | null => (iso ? new Date(iso)
 
 // Donations awaiting drop-off: accept ('available') or reject ('not-received').
 // The action revalidates /notifications; router.refresh() re-renders the list
-// (the item leaves this tab), replacing the old setNotificationsUpdated flag.
+// (the item leaves this tab), replacing the old client-side refetch flag.
 export default function PendingDeliveryCard({ donation }: { donation: DonationDTO }) {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const router = useRouter();

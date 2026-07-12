@@ -77,9 +77,9 @@ export default function InventoryView({ items }: InventoryViewProps) {
         <>
             <Paper variant="outlined" sx={{ padding: '2px', mb: 2 }}>
                 <Typography variant="body1">
-                    <b>DISCLAIMER: </b> ALL ITEMS ARE TRANSFERRED AS IS. THE EXCHANGE EXPRESSLY DISCLAIMS ALL OTHER WARRANTIES EXPRESS OR IMPLIED,
-                    INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTY OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. Recipients of products
-                    from the Exchange should inspect items and verify recall status prior to use.
+                    <b>DISCLAIMER: </b> ALL ITEMS ARE TRANSFERRED AS IS. THE EXCHANGE EXPRESSLY DISCLAIMS ALL OTHER WARRANTIES EXPRESS OR IMPLIED, INCLUDING BUT
+                    NOT LIMITED TO ANY IMPLIED WARRANTY OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. Recipients of products from the Exchange should
+                    inspect items and verify recall status prior to use.
                 </Typography>
             </Paper>
 

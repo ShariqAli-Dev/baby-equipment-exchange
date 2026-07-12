@@ -36,10 +36,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     ];
 
     return (
-        <ListPageShell
-            title="Inventory"
-            filterBar={<FilterBar searchPlaceholder="Search by tag, brand, model, or category" filters={filters} />}
-        >
+        <ListPageShell title="Inventory" filterBar={<FilterBar searchPlaceholder="Search by tag, brand, model, or category" filters={filters} />}>
             <InventoryView items={inventory} />
         </ListPageShell>
     );
