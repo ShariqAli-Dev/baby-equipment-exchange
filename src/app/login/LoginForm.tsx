@@ -13,7 +13,7 @@ import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 //Styling
 import '../../styles/globalStyles.css';
 
-export default function LoginForm() {
+export default function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [isInvalidLogin, setIsInvalidLogin] = useState<boolean>(false);
@@ -28,7 +28,7 @@ export default function LoginForm() {
                 return;
             }
             await createSession(await user.getIdToken());
-            router.push('/');
+            router.push(redirectTo);
             router.refresh(); // re-render server components with the new cookie
         } catch (error) {
             setIsInvalidLogin(true);
