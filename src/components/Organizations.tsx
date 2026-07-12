@@ -1,69 +1,52 @@
 'use client';
 
-//Hooks
-import { useState, Dispatch, SetStateAction } from 'react';
+// INTERIM: only the admin Dashboard (deleted in the home/dashboard vertical) still
+// renders this. The canonical organizations list is the server page at
+// /organizations; rows navigate to /organizations/[id] and "Create new" links to
+// /organizations/create instead of the in-place detail/form state switches.
 
+//Hooks
+import { Dispatch, SetStateAction } from 'react';
 //Components
-import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
-import OrganizationDetails from '@/components/OrganizationDetails';
-import OrganizationForm from '@/components/OrganizationForm';
+import Link from 'next/link';
+import { Button, List, ListItem, ListItemButton, ListItemText, Typography } from '@mui/material';
 //Styles
 import '@/styles/globalStyles.css';
-import Loader from '@/components/Loader';
-import { Button, IconButton, List, ListItem, ListItemButton, ListItemText, Typography } from '@mui/material';
-//Icons
-import RefreshIcon from '@mui/icons-material/Refresh';
-//Types
+
 type OrganizationsProps = {
     orgNamesAndIds: { [key: string]: string };
+    // Still passed by the Dashboard (dies in the home/dashboard vertical); unused
+    // here since mutations happen on the canonical /organizations routes now.
     setOrgsUpdated?: Dispatch<SetStateAction<boolean>>;
     handleRefresh?: () => void;
 };
 
 const Organizations = (props: OrganizationsProps) => {
-    const { orgNamesAndIds, setOrgsUpdated, handleRefresh } = props;
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [idToDisplay, setIdToDisplay] = useState<string | null>(null);
-    const [showForm, setShowForm] = useState<boolean>(false);
+    const { orgNamesAndIds } = props;
 
     const orgNames = Object.keys(orgNamesAndIds);
 
-    const handleShowForm = () => {
-        //Close details if open
-        setIdToDisplay(null);
-        setShowForm(true);
-    };
-
     return (
-        <ProtectedAdminRoute>
-            {idToDisplay && <OrganizationDetails id={idToDisplay} setIdToDisplay={setIdToDisplay} setOrgsUpdated={setOrgsUpdated} />}
-            {showForm && <OrganizationForm setShowForm={setShowForm} setOrgsUpdated={setOrgsUpdated} />}
-            {!idToDisplay && !showForm && (
-                <>
-                    <div className="page--header">
-                        <Typography variant="h5">Organizations</Typography>
-                    </div>
-                    <Button variant="contained" type="button" onClick={handleShowForm}>
-                        Create new
-                    </Button>
+        <>
+            <div className="page--header">
+                <Typography variant="h5">Organizations</Typography>
+            </div>
+            <Button variant="contained" component={Link} href="/organizations/create">
+                Create new
+            </Button>
 
-                    <div className="content--container">
-                        {isLoading && <Loader />}
-                        {!isLoading && orgNamesAndIds && (
-                            <List>
-                                {orgNames.map((org) => (
-                                    <ListItem key={org}>
-                                        <ListItemButton component="a" onClick={() => setIdToDisplay(orgNamesAndIds[org])}>
-                                            <ListItemText primary={org} sx={{ color: 'black' }} />
-                                        </ListItemButton>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        )}
-                    </div>
-                </>
-            )}
-        </ProtectedAdminRoute>
+            <div className="content--container">
+                <List>
+                    {orgNames.map((org) => (
+                        <ListItem key={org}>
+                            <ListItemButton component={Link} href={`/organizations/${orgNamesAndIds[org]}`}>
+                                <ListItemText primary={org} sx={{ color: 'black' }} />
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
+            </div>
+        </>
     );
 };
 

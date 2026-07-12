@@ -1,64 +1,51 @@
 'use client';
 
 //Hooks
-import { useState, Dispatch, SetStateAction } from 'react';
-
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 //Components
-import { Box, FormControl, FormControlLabel, FormGroup, FormLabel, TextField, Checkbox, Button, FormHelperText } from '@mui/material';
+import { Box, FormControl, FormControlLabel, FormGroup, FormLabel, TextField, Checkbox, Button, FormHelperText, Typography } from '@mui/material';
 import { PatternFormat, OnValueChange } from 'react-number-format';
-import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import CustomDialog from '@/components/CustomDialog';
 import Loader from '@/components/Loader';
 //API
 import { addErrorEvent } from '@/api/firebase';
-import { updateOrganization } from '@/api/firebase-organizations';
+import { addOrganizationAction } from '@/server/actions/organizations';
 //Types
-import { orgTags, OrganizationTagKeys, OrganizationTagValues, organizationTags, IOrganization } from '@/models/organization';
+import { orgTags, OrganizationTagKeys, OrganizationTagValues, organizationTags } from '@/models/organization';
 import { IAddress } from '@/models/address';
+import { OrganizationBody } from '@/types/OrganizationTypes';
 //Styles
 import '@/styles/globalStyles.css';
 
 const tagNames: OrganizationTagKeys[] = Object.keys(orgTags) as OrganizationTagKeys[];
 
-type EditOrganizationProps = {
-    organizationDetails: IOrganization;
-    setIsEditMode: Dispatch<SetStateAction<boolean>>;
-    setOrgsUpdated?: Dispatch<SetStateAction<boolean>>;
-    fetchDonationDetails: (id: string) => void;
-};
-
-const defaultAddress: IAddress = {
-    line_1: '',
-    line_2: '',
-    city: '',
-    state: '',
-    zipcode: ''
-};
-
-const EditOrganization = (props: EditOrganizationProps) => {
-    const { id, name, address, county, phoneNumber, tags } = props.organizationDetails;
-    const { setIsEditMode, fetchDonationDetails, setOrgsUpdated } = props;
+// Admin-only enforcement lives in the (admin) group layout and in
+// addOrganizationAction's requireAdmin — no client-side role check needed.
+export default function OrganizationFormClient() {
+    const defaultAddress: IAddress = {
+        line_1: '',
+        line_2: '',
+        city: '',
+        state: '',
+        zipcode: ''
+    };
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [newName, setNewName] = useState<string>(name);
-    const [newAddress, setNewAddress] = useState<IAddress>(address ?? defaultAddress);
-    const [newCounty, setNewCounty] = useState<string>(county ?? '');
-    const [newPhoneNumber, setNewPhoneNumber] = useState<string>(phoneNumber ?? '');
-    const [newTags, setNewTags] = useState<OrganizationTagValues[]>([...tags]);
+    const [name, setName] = useState<string>('');
+    const [address, setAddress] = useState<IAddress>(defaultAddress);
+    const [county, setCounty] = useState<string>('');
+    const [phoneNumber, setPhoneNumber] = useState<string>('');
+    const [tags, setTags] = useState<OrganizationTagValues[]>(['mutual-aid']);
     const [error, setError] = useState<boolean>(false);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-    const handleClose = () => {
-        if (setOrgsUpdated) setOrgsUpdated(true);
-        setIsDialogOpen(false);
-        setIsEditMode(false);
-        fetchDonationDetails(id);
-    };
+    const router = useRouter();
 
     const handleAdressInput = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
 
-        setNewAddress((prevAddress) => {
+        setAddress((prevAddress) => {
             return {
                 ...prevAddress,
                 [name]: value
@@ -67,50 +54,62 @@ const EditOrganization = (props: EditOrganizationProps) => {
     };
 
     const handlePhoneNumberInput: OnValueChange = (values): void => {
-        setNewPhoneNumber(values.formattedValue);
+        setPhoneNumber(values.formattedValue);
     };
 
     const handleCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { checked, value } = event.target;
-        const updatedTags = checked ? [...newTags, value] : newTags.filter((tag) => tag !== value);
-        setNewTags(updatedTags);
+        const updatedTags = checked ? [...tags, value as OrganizationTagValues] : tags.filter((tag) => tag !== value);
+        setTags(updatedTags);
         setError(updatedTags.length === 0);
     };
 
-    const handleSubmitUpdatedOrg = async (event: React.FormEvent): Promise<void> => {
+    const handleSubmit = async (event: React.FormEvent): Promise<void> => {
         event.preventDefault();
         setIsLoading(true);
+        const orgToSubmit: OrganizationBody = {
+            name: name,
+            address: address,
+            county: county,
+            phoneNumber: phoneNumber,
+            tags: tags,
+            notes: []
+        };
         try {
-            const updatedOrganization = {
-                name: newName,
-                address: newAddress,
-                county: newCounty,
-                phoneNumber: newPhoneNumber,
-                tags: newTags
-            };
-            await updateOrganization(id, updatedOrganization);
+            await addOrganizationAction(orgToSubmit);
             setIsDialogOpen(true);
         } catch (error) {
-            addErrorEvent('Error submitting organization update', error);
+            addErrorEvent('Submit Organization', error);
             throw error;
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
+    };
+
+    const handleClose = () => {
+        setIsDialogOpen(false);
+        // Action already revalidated /organizations; the new org shows in the list.
+        router.push('/organizations');
     };
 
     return (
-        <ProtectedAdminRoute>
+        <>
+            <div className="page--header">
+                <Typography variant="h5">Create Organization</Typography>
+            </div>
+
             {isLoading && <Loader />}
             {!isLoading && (
                 <div className="content--container">
-                    <Box component="form" display={'flex'} flexDirection={'column'} gap={4} className="form--container" onSubmit={handleSubmitUpdatedOrg}>
+                    <Box component="form" display={'flex'} flexDirection={'column'} gap={4} className="form--container" onSubmit={handleSubmit}>
                         <TextField
                             type="text"
                             label="Name"
                             name="name"
                             id="name"
                             placeholder="Name"
-                            onChange={(e) => setNewName(e.target.value)}
-                            value={newName}
+                            onChange={(e) => setName(e.target.value)}
+                            value={name}
                             required
                         ></TextField>
                         <FormControl component="fieldset" sx={{ display: 'flex', gap: 2 }}>
@@ -122,7 +121,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                 id="line_1"
                                 placeholder="Address"
                                 onChange={handleAdressInput}
-                                value={newAddress.line_1}
+                                value={address.line_1}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -131,7 +130,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                 id="line_2"
                                 placeholder="Address Line 2"
                                 onChange={handleAdressInput}
-                                value={newAddress.line_2}
+                                value={address.line_2}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -140,7 +139,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                 id="city"
                                 placeholder="City"
                                 onChange={handleAdressInput}
-                                value={newAddress.city}
+                                value={address.city}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -149,7 +148,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                 id="state"
                                 placeholder="State"
                                 onChange={handleAdressInput}
-                                value={newAddress.state}
+                                value={address.state}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -158,7 +157,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                 id="zipcode"
                                 placeholder="Address"
                                 onChange={handleAdressInput}
-                                value={newAddress.zipcode}
+                                value={address.zipcode}
                             ></TextField>
                         </FormControl>
                         <TextField
@@ -167,8 +166,8 @@ const EditOrganization = (props: EditOrganizationProps) => {
                             name="county"
                             id="county"
                             placeholder="County"
-                            onChange={(e) => setNewCounty(e.target.value)}
-                            value={newCounty}
+                            onChange={(e) => setCounty(e.target.value)}
+                            value={county}
                         ></TextField>
                         <PatternFormat
                             id="phone-number"
@@ -177,7 +176,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                             name="phone-number"
                             label="Phone number (Optional)"
                             allowEmptyFormatting
-                            value={newPhoneNumber}
+                            value={phoneNumber}
                             onValueChange={handlePhoneNumberInput}
                             type="tel"
                             displayType="input"
@@ -194,7 +193,7 @@ const EditOrganization = (props: EditOrganizationProps) => {
                                                 name={`${tag}`}
                                                 onChange={handleCheck}
                                                 value={orgTags[tag as keyof organizationTags]}
-                                                checked={newTags.includes(orgTags[tag as keyof organizationTags])}
+                                                checked={tags.includes(orgTags[tag as keyof organizationTags])}
                                                 inputProps={{ 'aria-label': `${tag}` }}
                                             />
                                         }
@@ -205,22 +204,12 @@ const EditOrganization = (props: EditOrganizationProps) => {
                             {error && <FormHelperText>At least one organization type must be selected.</FormHelperText>}
                         </FormControl>
                         <Button type="submit" variant="contained" disabled={error}>
-                            Save Changes
-                        </Button>
-                        <Button type="button" variant="outlined" onClick={() => setIsEditMode(false)}>
-                            Cancel
+                            Create Organization
                         </Button>
                     </Box>
-                    <CustomDialog
-                        isOpen={isDialogOpen}
-                        onClose={handleClose}
-                        title="Organization updated"
-                        content={`Organization ${newName} has been successfully updated.`}
-                    />
+                    <CustomDialog isOpen={isDialogOpen} onClose={handleClose} title="Organization created successfully" content={`Organization ${name} was created sucessfully.`} />
                 </div>
             )}
-        </ProtectedAdminRoute>
+        </>
     );
-};
-
-export default EditOrganization;
+}

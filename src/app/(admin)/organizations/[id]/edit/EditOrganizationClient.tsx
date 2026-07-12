@@ -1,63 +1,57 @@
 'use client';
 
 //Hooks
-import { Dispatch, SetStateAction, useState } from 'react';
-import { useUserContext } from '@/contexts/UserContext';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 //Components
-import { Box, FormControl, FormControlLabel, FormGroup, FormLabel, TextField, Checkbox, Button, FormHelperText, IconButton, Typography } from '@mui/material';
+import { Box, FormControl, FormControlLabel, FormGroup, FormLabel, TextField, Checkbox, Button, FormHelperText } from '@mui/material';
 import { PatternFormat, OnValueChange } from 'react-number-format';
-import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import CustomDialog from '@/components/CustomDialog';
 import Loader from '@/components/Loader';
-//Icons
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-
 //API
 import { addErrorEvent } from '@/api/firebase';
-import { addOrganization } from '@/api/firebase-organizations';
+import { updateOrganizationAction } from '@/server/actions/organizations';
 //Types
 import { orgTags, OrganizationTagKeys, OrganizationTagValues, organizationTags } from '@/models/organization';
 import { IAddress } from '@/models/address';
-import { OrganizationBody } from '@/types/OrganizationTypes';
+import type { OrganizationDTO } from '@/server/organizations';
 //Styles
 import '@/styles/globalStyles.css';
 
-type DonationFormProps = {
-    setShowForm?: Dispatch<SetStateAction<boolean>>;
-    setOrgsUpdated?: Dispatch<SetStateAction<boolean>>;
+const tagNames: OrganizationTagKeys[] = Object.keys(orgTags) as OrganizationTagKeys[];
+
+const defaultAddress: IAddress = {
+    line_1: '',
+    line_2: '',
+    city: '',
+    state: '',
+    zipcode: ''
 };
 
-export default function OrganizationForm(props: DonationFormProps) {
-    const { setShowForm, setOrgsUpdated } = props;
-    const defaultAddress: IAddress = {
-        line_1: '',
-        line_2: '',
-        city: '',
-        state: '',
-        zipcode: ''
-    };
+export default function EditOrganizationClient({ organization }: { organization: OrganizationDTO }) {
+    const { id, name, address, county, phoneNumber, tags } = organization;
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [name, setName] = useState<string>('');
-    const [address, setAddress] = useState<IAddress>(defaultAddress);
-    const [county, setCounty] = useState<string>('');
-    const [phoneNumber, setPhoneNumber] = useState<string>('');
-    const [tags, setTags] = useState<OrganizationTagValues[]>(['mutual-aid']);
+    const [newName, setNewName] = useState<string>(name);
+    const [newAddress, setNewAddress] = useState<IAddress>(address ?? defaultAddress);
+    const [newCounty, setNewCounty] = useState<string>(county ?? '');
+    const [newPhoneNumber, setNewPhoneNumber] = useState<string>(phoneNumber ?? '');
+    const [newTags, setNewTags] = useState<OrganizationTagValues[]>([...tags] as OrganizationTagValues[]);
     const [error, setError] = useState<boolean>(false);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-    const [dialogText, setDialogText] = useState<string>('');
-    const [dialogContent, setDialogContent] = useState<string>('');
 
-    const { isAdmin } = useUserContext();
     const router = useRouter();
 
-    const tagNames: OrganizationTagKeys[] = Object.keys(orgTags) as OrganizationTagKeys[];
+    const handleClose = () => {
+        setIsDialogOpen(false);
+        // Action already revalidated /organizations/[id]; land on the detail view.
+        router.push(`/organizations/${id}`);
+    };
 
     const handleAdressInput = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
 
-        setAddress((prevAddress) => {
+        setNewAddress((prevAddress) => {
             return {
                 ...prevAddress,
                 [name]: value
@@ -66,85 +60,51 @@ export default function OrganizationForm(props: DonationFormProps) {
     };
 
     const handlePhoneNumberInput: OnValueChange = (values): void => {
-        setPhoneNumber(values.formattedValue);
+        setNewPhoneNumber(values.formattedValue);
     };
 
     const handleCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { checked, value } = event.target;
-        const updatedTags = checked ? [...tags, value] : tags.filter((tag) => tag !== value);
-        setTags(updatedTags);
+        const updatedTags = checked ? [...newTags, value as OrganizationTagValues] : newTags.filter((tag) => tag !== value);
+        setNewTags(updatedTags);
         setError(updatedTags.length === 0);
     };
 
-    const handleSubmit = async (event: React.FormEvent): Promise<void> => {
+    const handleSubmitUpdatedOrg = async (event: React.FormEvent): Promise<void> => {
         event.preventDefault();
         setIsLoading(true);
-        if (!isAdmin) {
-            setDialogText('Organization creation failed');
-            setDialogContent('You must be an adminstrator to create a new organization');
-            setIsLoading(false);
-            setIsDialogOpen(true);
-            return;
-        }
-        const orgToSubmit: OrganizationBody = {
-            name: name,
-            address: address,
-            county: county,
-            phoneNumber: phoneNumber,
-            tags: tags,
-            notes: []
-        };
         try {
-            await addOrganization(orgToSubmit);
-            setDialogText('Organization created successfully');
-            setDialogContent(`Organization ${name} was created sucessfully.`);
+            const updatedOrganization = {
+                name: newName,
+                address: newAddress,
+                county: newCounty,
+                phoneNumber: newPhoneNumber,
+                tags: newTags
+            };
+            await updateOrganizationAction(id, updatedOrganization);
             setIsDialogOpen(true);
-            setName('');
-            setAddress(defaultAddress);
-            setPhoneNumber('');
-            setTags([]);
         } catch (error) {
-            addErrorEvent('Submit Organization', error);
+            addErrorEvent('Error submitting organization update', error);
             throw error;
-        } finally {
-            setIsLoading(false);
         }
-    };
-
-    const handleClose = () => {
-        if (setOrgsUpdated) setOrgsUpdated(true);
-        if (setShowForm) {
-            setIsDialogOpen(false);
-            setShowForm(false);
-        } else {
-            setIsDialogOpen(false);
-            router.push('/organizations');
-        }
+        setIsLoading(false);
     };
 
     return (
-        <ProtectedAdminRoute>
-            <div className="page--header">
-                <Typography variant="h5">Create Organization</Typography>
-                {setShowForm && (
-                    <IconButton onClick={() => setShowForm(false)}>
-                        <ArrowBackIcon />
-                    </IconButton>
-                )}
-            </div>
-
+        <div className="page--header">
+            <h3>Edit Organization</h3>
             {isLoading && <Loader />}
             {!isLoading && (
                 <div className="content--container">
-                    <Box component="form" display={'flex'} flexDirection={'column'} gap={4} className="form--container" onSubmit={handleSubmit}>
+                    <Box component="form" display={'flex'} flexDirection={'column'} gap={4} className="form--container" onSubmit={handleSubmitUpdatedOrg}>
                         <TextField
                             type="text"
                             label="Name"
                             name="name"
                             id="name"
                             placeholder="Name"
-                            onChange={(e) => setName(e.target.value)}
-                            value={name}
+                            onChange={(e) => setNewName(e.target.value)}
+                            value={newName}
                             required
                         ></TextField>
                         <FormControl component="fieldset" sx={{ display: 'flex', gap: 2 }}>
@@ -156,7 +116,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                 id="line_1"
                                 placeholder="Address"
                                 onChange={handleAdressInput}
-                                value={address.line_1}
+                                value={newAddress.line_1}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -165,7 +125,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                 id="line_2"
                                 placeholder="Address Line 2"
                                 onChange={handleAdressInput}
-                                value={address.line_2}
+                                value={newAddress.line_2}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -174,7 +134,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                 id="city"
                                 placeholder="City"
                                 onChange={handleAdressInput}
-                                value={address.city}
+                                value={newAddress.city}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -183,7 +143,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                 id="state"
                                 placeholder="State"
                                 onChange={handleAdressInput}
-                                value={address.state}
+                                value={newAddress.state}
                             ></TextField>
                             <TextField
                                 type="text"
@@ -192,7 +152,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                 id="zipcode"
                                 placeholder="Address"
                                 onChange={handleAdressInput}
-                                value={address.zipcode}
+                                value={newAddress.zipcode}
                             ></TextField>
                         </FormControl>
                         <TextField
@@ -201,8 +161,8 @@ export default function OrganizationForm(props: DonationFormProps) {
                             name="county"
                             id="county"
                             placeholder="County"
-                            onChange={(e) => setCounty(e.target.value)}
-                            value={county}
+                            onChange={(e) => setNewCounty(e.target.value)}
+                            value={newCounty}
                         ></TextField>
                         <PatternFormat
                             id="phone-number"
@@ -211,7 +171,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                             name="phone-number"
                             label="Phone number (Optional)"
                             allowEmptyFormatting
-                            value={phoneNumber}
+                            value={newPhoneNumber}
                             onValueChange={handlePhoneNumberInput}
                             type="tel"
                             displayType="input"
@@ -228,7 +188,7 @@ export default function OrganizationForm(props: DonationFormProps) {
                                                 name={`${tag}`}
                                                 onChange={handleCheck}
                                                 value={orgTags[tag as keyof organizationTags]}
-                                                checked={tags.includes(orgTags[tag as keyof organizationTags])}
+                                                checked={newTags.includes(orgTags[tag as keyof organizationTags])}
                                                 inputProps={{ 'aria-label': `${tag}` }}
                                             />
                                         }
@@ -239,12 +199,20 @@ export default function OrganizationForm(props: DonationFormProps) {
                             {error && <FormHelperText>At least one organization type must be selected.</FormHelperText>}
                         </FormControl>
                         <Button type="submit" variant="contained" disabled={error}>
-                            Create Organization
+                            Save Changes
+                        </Button>
+                        <Button type="button" variant="outlined" onClick={() => router.push(`/organizations/${id}`)}>
+                            Cancel
                         </Button>
                     </Box>
-                    <CustomDialog isOpen={isDialogOpen} onClose={handleClose} title={dialogText} content={dialogContent} />
+                    <CustomDialog
+                        isOpen={isDialogOpen}
+                        onClose={handleClose}
+                        title="Organization updated"
+                        content={`Organization ${newName} has been successfully updated.`}
+                    />
                 </div>
             )}
-        </ProtectedAdminRoute>
+        </div>
     );
 }
