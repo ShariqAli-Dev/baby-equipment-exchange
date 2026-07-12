@@ -24,13 +24,8 @@ import {
     User,
     UserCredential
 } from 'firebase/auth';
-//API
-import { getAuthUserById } from './firebaseAdmin';
 // Models
 import { IUser, UserCollection } from '@/models/user';
-import { Event, IEvent } from '@/models/event';
-// Types
-import { NoteBody } from '@/types/post-data';
 
 export const USERS_COLLECTION = 'Users';
 
@@ -154,34 +149,6 @@ export async function enableDbUser(uid: string): Promise<void> {
     }
 }
 
-//returns Auth User and db User details combined
-export async function getUserDetails(uid: string): Promise<IUser> {
-    try {
-        const [authUser, dbUser] = await Promise.all([getAuthUserById(uid), getDbUser(uid)]);
-        const userDetails: IUser = {
-            uid: authUser.uid,
-            email: authUser.email,
-            displayName: authUser.displayName,
-            disabled: authUser.disabled,
-            metadata: authUser.metadata,
-            customClaims: authUser.customClaims,
-            phoneNumber: dbUser.phoneNumber,
-            requestedItems: dbUser.requestedItems,
-            distributedItems: dbUser.distributedItems,
-            notes: dbUser.notes,
-            organization: dbUser.organization,
-            title: dbUser.title,
-            termsAccepted: dbUser.termsAccepted,
-            createdAt: dbUser.createdAt,
-            modifiedAt: dbUser.modifiedAt
-        };
-        return userDetails;
-    } catch (error) {
-        addErrorEvent('Get User Details', error);
-    }
-    return Promise.reject();
-}
-
 export async function getUsersNotifications(): Promise<IUser[]> {
     const users: IUser[] = [];
     try {
@@ -206,16 +173,6 @@ export async function getUserId(): Promise<string> {
     await auth.authStateReady();
     const currentUser = auth.currentUser?.uid;
     return currentUser ?? Promise.reject();
-}
-
-export async function getUserEmailById(id: string): Promise<string> {
-    try {
-        const user = await getAuthUserById(id);
-        if (user.email) return user.email;
-    } catch (error) {
-        addErrorEvent('Get user email by ID', error);
-    }
-    return Promise.reject();
 }
 
 export async function signInAuthUserWithEmailAndPassword(email: string, password: string): Promise<null | User> {
@@ -247,22 +204,4 @@ export async function loginAnonymousUser(): Promise<User | null> {
         addErrorEvent('Login anonymously', error);
     }
     return Promise.reject();
-}
-
-export async function addNote(note: NoteBody) {
-    try {
-        const currentTime = new Date();
-        const currentTimeString = currentTime.toDateString();
-        const userId: string = await getUserId();
-        const eventParams: IEvent = {
-            type: '',
-            note: note.text,
-            createdBy: doc(db, `${USERS_COLLECTION}/${userId}`),
-            createdAt: currentTimeString,
-            modifiedAt: currentTimeString
-        };
-        const event = new Event(eventParams);
-    } catch (error) {
-        addErrorEvent('addNote', { error: error, note: note });
-    }
 }

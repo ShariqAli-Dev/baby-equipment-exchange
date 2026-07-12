@@ -4,7 +4,7 @@ import { getStorage } from 'firebase/storage';
 import { User, getAuth } from 'firebase/auth';
 
 import { firebaseConfig } from './config';
-import { addEvent, checkClaims } from './firebaseAdmin';
+import { logClientErrorAction } from '@/server/actions/events';
 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
@@ -42,15 +42,6 @@ export async function callCreateUser(accountInfo: NewUserAccountInfo): Promise<U
         addErrorEvent('Create user', error);
     }
     return Promise.reject();
-}
-
-export async function callCheckClaims(...claimNames: string[]): Promise<any> {
-    if (claimNames.length === 0) {
-        claimNames = ['admin', 'aid-worker'];
-    }
-    const idToken = await auth.currentUser?.getIdToken();
-    const response = await checkClaims({ idToken: idToken, claimNames: claimNames });
-    return response;
 }
 
 export async function callIsEmailInUse(email: string): Promise<boolean> {
@@ -182,10 +173,11 @@ export async function checkIsAidWorker(user: User): Promise<boolean> {
     return Promise.reject();
 }
 
-// Utilitarian
+// Utilitarian — routes through a server action instead of importing the old
+// 'use server' firebaseAdmin module into client code (L9).
 export async function addErrorEvent(location: string, error: any): Promise<void> {
     try {
-        await addEvent({ location: location, error: convertToString(error) });
+        await logClientErrorAction(location, convertToString(error));
     } catch (error) {
         console.log(error);
     }
