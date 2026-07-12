@@ -2,7 +2,6 @@
 //Hooks
 import { useRouter } from 'next/navigation';
 import { useUserContext } from '@/contexts/UserContext';
-import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 //Components
 import Link from 'next/link';
 //Libs
@@ -13,11 +12,11 @@ import { Typography } from '@mui/material';
 
 export default function Footer() {
     const { currentUser } = useUserContext();
-    const { clearPendingDonations } = usePendingDonationsContext();
     const router = useRouter();
 
     const handleSignOut = async () => {
-        clearPendingDonations();
+        // Draft cleanup: signOutEverywhere clears localStorage, and the (donate)-scoped
+        // PendingDonations provider unmounts on navigation — no context call needed here.
         await signOutEverywhere(router);
     };
 

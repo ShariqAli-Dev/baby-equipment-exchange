@@ -1,7 +1,3 @@
-.donate__container {
-    margin: 1rem auto;
-}
-
 .image-uploader__container {
     width: 100%;
     border: 1px dashed black;
@@ -35,14 +31,6 @@
 .image-uploader__input input {
     display: none;
 }
-
-/* .image-uploader__input label {
-    border-radius: 2px;
-    border: 1px solid black;
-    color: var(--button-dark);
-    font-weight: 700;
-    padding: 5px;
-} */
 
 .image-uploader__thumbnail {
     width: 23%;

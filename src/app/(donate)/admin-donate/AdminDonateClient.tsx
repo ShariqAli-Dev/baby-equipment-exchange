@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import { Box, Button, IconButton, Stack, Typography } from '@mui/material';
 import Loader from '@/components/Loader';
-import AdminDonationForm from '@/components/AdminDonationForm';
+import DonationForm, { DonationFormCategory, DonationFormValues } from '@/components/DonationForm';
 import PendingDonations from '@/components/PendingDonations';
 import CustomDialog from '@/components/CustomDialog';
 //Api
@@ -28,15 +28,26 @@ import '@/styles/globalStyles.css';
 //Types
 import { AdminDonationBody, DonationFormData } from '@/types/DonationTypes';
 
-export default function AdminDonate() {
+export default function AdminDonateClient({ categories }: { categories: DonationFormCategory[] }) {
     const [showForm, setShowForm] = useState<boolean>(true);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [submittedDonations, setSubmittedDonations] = useState<AdminDonationBody[]>([]);
 
     const { currentUser } = useUserContext();
-    const { pendingDonations, clearPendingDonations } = usePendingDonationsContext();
+    const { pendingDonations, addPendingDonation, clearPendingDonations } = usePendingDonationsContext();
     const router = useRouter();
+
+    const handleAddPendingDonation = (values: DonationFormValues) => {
+        addPendingDonation({
+            category: values.category ?? '',
+            brand: values.brand,
+            model: values.model,
+            description: values.description,
+            images: values.newImages
+        });
+        setShowForm(false);
+    };
 
     const handleClose = () => {
         setIsOpen(false);
@@ -118,7 +129,14 @@ export default function AdminDonate() {
                 <Loader />
             ) : (
                 <Stack direction="column" spacing={2}>
-                    {showForm && <AdminDonationForm setShowForm={setShowForm} />}
+                    {showForm && (
+                        <DonationForm
+                            mode="admin-create"
+                            categories={categories}
+                            onSubmit={handleAddPendingDonation}
+                            onCancel={pendingDonations.length > 0 ? () => setShowForm(false) : undefined}
+                        />
+                    )}
                     <hr />
                     {pendingDonations.length > 0 && <PendingDonations />}
 

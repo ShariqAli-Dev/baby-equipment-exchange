@@ -5,13 +5,15 @@ import { MouseEventHandler, useEffect, useState, Dispatch, SetStateAction } from
 //APi
 import { addErrorEvent } from '@/api/firebase';
 import { getDonationById, updateDonation, updateDonationStatus } from '@/api/firebase-donations';
+import { getAllCategories, getTagNumber } from '@/api/firebase-categories';
+import { uploadImages } from '@/api/firebase-images';
 import { productLifeCycleReport } from '@/api/firebase-reports';
 //Components
-import { Dialog, DialogActions, ImageList, ImageListItem, Button, Divider, IconButton, Typography, Stack } from '@mui/material';
+import { Dialog, DialogActions, ImageList, ImageListItem, Button, Divider, IconButton, Paper, Typography, Stack } from '@mui/material';
 import Loader from '@/components/Loader';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import CustomDialog from './CustomDialog';
-import EditDonation from '@/components/EditDonation';
+import DonationForm, { DonationFormValues } from '@/components/DonationForm';
 //icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -22,6 +24,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import '@/styles/globalStyles.css';
 //Types
 import { DonationStatusKeys, donationStatuses, Donation } from '@/models/donation';
+import { Category } from '@/models/category';
 
 type DonationDetailsProps = {
     id: string | null;
@@ -41,9 +44,47 @@ const DonationDetails = (props: DonationDetailsProps) => {
     const [openImageURL, setOpenImageURL] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [dialogContent, setDialogContent] = useState<string>('');
+    const [categories, setCategories] = useState<Category[] | null>(null);
 
     //Status names for select menu
     const statusSelectOptions = Object.keys(donationStatuses);
+
+    // Categories are only needed for the edit form; fetched lazily on first edit.
+    // (Goes away in the donations vertical migration when this becomes a server-fed route.)
+    async function fetchCategories(): Promise<void> {
+        try {
+            setCategories(await getAllCategories());
+        } catch (error) {
+            addErrorEvent('Error fetching all categories: ', error);
+            throw error;
+        }
+    }
+
+    async function handleEditSubmit(values: DonationFormValues): Promise<void> {
+        setIsLoading(true);
+        try {
+            let addedImageUrls: string[] = [];
+            if (values.newImages.length > 0) {
+                addedImageUrls = await uploadImages(values.newImages);
+            }
+            await updateDonation(donationDetails!.id, {
+                category: values.category,
+                tagNumber: values.tagNumber ?? '',
+                brand: values.brand,
+                model: values.model,
+                description: values.description,
+                images: [...addedImageUrls, ...values.keptImageUrls]
+            });
+            setIsEditMode(false);
+            setDialogContent(`The donation ${values.model} has been updated successfully.`);
+            setIsDialogOpen(true);
+        } catch (error) {
+            addErrorEvent('Error submitting donation update', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     async function fetchDonation(id: string) {
         setIsLoading(true);
@@ -113,6 +154,10 @@ const DonationDetails = (props: DonationDetailsProps) => {
     useEffect(() => {
         if ((id && !donation) || (id && donationDetailsUpdated)) fetchDonation(id);
     }, [donationDetailsUpdated]);
+
+    useEffect(() => {
+        if (isEditMode && !categories) fetchCategories();
+    }, [isEditMode]);
 
     return (
         <ProtectedAdminRoute>
@@ -234,7 +279,28 @@ const DonationDetails = (props: DonationDetailsProps) => {
                     </div>
                 )}
                 {!isLoading && donationDetails && isEditMode && (
-                    <EditDonation donationDetails={donationDetails} setIsEditMode={setIsEditMode} setDonationDetailsUpdated={setDonationDetailsUpdated} />
+                    <Paper className="content--container" elevation={8} square={false}>
+                        {categories === null ? (
+                            <Loader />
+                        ) : (
+                            <DonationForm
+                                mode="edit"
+                                categories={categories.map(({ name, active }) => ({ name, active }))}
+                                initial={{
+                                    category: donationDetails.category,
+                                    brand: donationDetails.brand,
+                                    model: donationDetails.model,
+                                    description: donationDetails.description ?? '',
+                                    tagNumber: donationDetails.tagNumber ?? null,
+                                    keptImageUrls: donationDetails.images,
+                                    status: donationDetails.status
+                                }}
+                                onSubmit={handleEditSubmit}
+                                onCancel={() => setIsEditMode(false)}
+                                onGenerateTagNumber={getTagNumber}
+                            />
+                        )}
+                    </Paper>
                 )}
             </div>
         </ProtectedAdminRoute>

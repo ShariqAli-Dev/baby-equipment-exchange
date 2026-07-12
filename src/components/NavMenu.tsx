@@ -8,7 +8,6 @@ import Drawer from '@mui/material/Drawer';
 //Hooks
 import { useRouter } from 'next/navigation';
 import { useUserContext } from '@/contexts/UserContext';
-import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 //Libs
 import { signOutEverywhere } from '@/lib/sign-out';
 //styles
@@ -22,11 +21,11 @@ interface Props {
 
 export default function NavMenu({ isOpen, handleIsOpen, closeMenu }: Props) {
     const { currentUser } = useUserContext();
-    const { clearPendingDonations } = usePendingDonationsContext();
     const router = useRouter();
 
     const handleSignOut = async () => {
-        clearPendingDonations();
+        // Draft cleanup: signOutEverywhere clears localStorage, and the (donate)-scoped
+        // PendingDonations provider unmounts on navigation — no context call needed here.
         await signOutEverywhere(router);
     };
 

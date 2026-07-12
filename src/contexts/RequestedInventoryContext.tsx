@@ -5,7 +5,6 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 
 import { InventoryItem } from '@/models/inventoryItem';
 import { getInventoryByIds } from '@/api/firebase-donations';
-import Loader from '@/components/Loader';
 
 type RequestedInventoryContextType = {
     requestedInventory: InventoryItem[];
@@ -70,9 +69,7 @@ export const RequestedInventoryProvider = ({ children }: Props) => {
     };
 
     useEffect(() => {
-        setIsLoading(true);
-        getRequestedInventoryFromLocalStorage();
-        setIsLoading(false);
+        getRequestedInventoryFromLocalStorage().finally(() => setIsLoading(false));
     }, []);
 
     useEffect(() => {
@@ -81,10 +78,8 @@ export const RequestedInventoryProvider = ({ children }: Props) => {
         }
     }, [requestedInventory]);
 
-    if (isLoading) {
-        return <Loader />;
-    }
-
+    // Children render immediately; the cart hydrates in the background (consumers can
+    // check isLoading). Blocking here used to stall every page in the app on this fetch.
     return <RequestedInventoryContext.Provider value={value}>{children}</RequestedInventoryContext.Provider>;
 };
 

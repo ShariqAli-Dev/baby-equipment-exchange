@@ -22,7 +22,7 @@ import { addErrorEvent } from '@/api/firebase';
 import { extractEmail } from '@/utils/utils';
 //Styles
 import '@/styles/globalStyles.css';
-import styles from './AdminCart.module.css';
+import styles from '../inventory-cart/InventoryCart.module.css'; // byte-identical twin deleted — one shared cart stylesheet
 //Types
 import { InventoryItem } from '@/models/inventoryItem';
 import { IUser } from '@/models/user';

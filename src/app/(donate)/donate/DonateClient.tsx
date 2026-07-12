@@ -7,7 +7,7 @@ import { useUserContext } from '@/contexts/UserContext';
 import { usePendingDonationsContext } from '@/contexts/PendingDonationsContext';
 //components
 import PendingDonations from '@/components/PendingDonations';
-import DonationForm from '@/components/DonationForm';
+import DonationForm, { DonationFormCategory, DonationFormValues } from '@/components/DonationForm';
 import { Button, Box, TextField, Typography, Paper, FormControlLabel, Checkbox } from '@mui/material';
 import Loader from '@/components/Loader';
 import CustomDialog from '@/components/CustomDialog';
@@ -33,7 +33,7 @@ import sendMail from '@/api/nodemailer';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function Donate() {
+export default function DonateClient({ categories }: { categories: DonationFormCategory[] }) {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [donorName, setDonorName] = useState<string>('');
     const [isValidName, setIsValidName] = useState<boolean>(true);
@@ -46,11 +46,22 @@ export default function Donate() {
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
     const { currentUser } = useUserContext();
-    const { pendingDonations, removePendingDonation, clearPendingDonations, pendingDonorEmail, setPendingDonorEmail, pendingDonorName, setPendingDonorName } =
+    const { pendingDonations, addPendingDonation, clearPendingDonations, pendingDonorEmail, setPendingDonorEmail, pendingDonorName, setPendingDonorName } =
         usePendingDonationsContext();
     const router = useRouter();
 
     const isDisabled = emailsDoNotMatch || donorName.length === 0;
+
+    const handleAddPendingDonation = (values: DonationFormValues) => {
+        addPendingDonation({
+            category: values.category ?? '',
+            brand: values.brand,
+            model: values.model,
+            description: values.description,
+            images: values.newImages
+        });
+        setShowForm(false);
+    };
 
     const handleClose = async () => {
         setIsDialogOpen(false);
@@ -187,7 +198,7 @@ export default function Donate() {
             {isLoading ? (
                 <Loader />
             ) : (
-                <div className={styles['donate--container']}>
+                <div>
                     <Typography variant="body1">
                         For a list of currently accepted items, please see our <a href="/about">about page</a>.
                     </Typography>
@@ -252,7 +263,14 @@ export default function Donate() {
                         </div>
                     )}
 
-                    {showForm && <DonationForm setShowForm={setShowForm} />}
+                    {showForm && (
+                        <DonationForm
+                            mode="create"
+                            categories={categories}
+                            onSubmit={handleAddPendingDonation}
+                            onCancel={pendingDonations.length > 0 ? () => setShowForm(false) : undefined}
+                        />
+                    )}
 
                     <hr />
                     {pendingDonations.length > 0 && <PendingDonations />}

@@ -1,7 +1,7 @@
 'use client';
 //Components
 import { Autocomplete, Box, Button, Checkbox, FormControlLabel, FormGroup, Paper, TextField, Typography } from '@mui/material';
-import UserConfirmationDialogue from '@/components/UserConfirmationDialogue';
+import CustomDialog from '@/components/CustomDialog';
 import Loader from '@/components/Loader';
 //Hooks
 import { useEffect, useState } from 'react';
@@ -176,7 +176,12 @@ export default function NewAccount() {
                 ) : (
                     <>
                         <Box component="form" gap={3} display={'flex'} flexDirection={'column'} onSubmit={handleAccountCreate} className="form--container">
-                            <UserConfirmationDialogue open={openDialog} onClose={handleClose} displayName={confirmedUserName} />
+                            <CustomDialog
+                                isOpen={openDialog}
+                                onClose={handleClose}
+                                title="User successfully created"
+                                content={`A user account for '${confirmedUserName}' has been created. You will receive a confirmation email once your account has been approved and made active.`}
+                            />
                             <TextField
                                 type="text"
                                 label="Display Name"
