@@ -3,6 +3,7 @@
 import { Card, CardMedia, CardContent, CardActionArea, CardActions, Typography, Stack, Chip, IconButton, Tooltip } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import { InventoryItem } from '@/models/inventoryItem';
+import { cardHoverSx } from './cardHoverSx';
 
 type InventoryItemCardProps = {
     inventoryItem: InventoryItem;
@@ -16,18 +17,7 @@ export default function InventoryItemCard({ inventoryItem, onSelect, handleReque
     const canRequest = inventoryItem.status === 'available';
 
     return (
-        <Card
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: 2,
-                transition: 'box-shadow 0.2s, transform 0.2s',
-                '&:hover': {
-                    boxShadow: 6,
-                    transform: 'translateY(-2px)'
-                }
-            }}
-        >
+        <Card sx={cardHoverSx}>
             <CardActionArea onClick={() => onSelect(inventoryItem)}>
                 <CardMedia
                     component="img"

@@ -1,7 +1,7 @@
 'use client';
 
 //Hooks
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react';
+import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 //Components
 import {
     Box,
@@ -21,15 +21,11 @@ import {
     Select,
     Typography
 } from '@mui/material';
-import ProtectedAdminRoute from './ProtectedAdminRoute';
 //Icons
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart';
 import BlockIcon from '@mui/icons-material/Block';
-//Api
-import { addErrorEvent } from '@/api/firebase';
-import { getAllActiveDbUsers } from '@/api/firebase-users';
 //Styles
 import '@/styles/globalStyles.css';
 //types
@@ -43,6 +39,10 @@ type DonationCardMedProps = {
     setIdToDisplay: Dispatch<SetStateAction<string | null>>;
     handleRemoveFromOrder?: (orderId: string, donation: Donation, resolution: OrderItemRejectionResolution) => Promise<void>;
     showRemoveButton?: boolean;
+    // Reassignment candidates come from the parent (server-provided once the
+    // orders vertical migrates) instead of a lazy in-card fetch.
+    activeUsers?: IUser[];
+    isLoadingUsers?: boolean;
 };
 
 type RejectionAction = OrderItemRejectionResolution['action'];
@@ -74,14 +74,11 @@ const rejectionOptions: {
 ];
 
 const DonationCardMed = (props: DonationCardMedProps) => {
-    const { orderId, donation, setIdToDisplay, handleRemoveFromOrder, showRemoveButton = true } = props;
+    const { orderId, donation, setIdToDisplay, handleRemoveFromOrder, showRemoveButton = true, activeUsers = [], isLoadingUsers = false } = props;
     const [showRemoveDialog, setShowRemoveDialog] = useState<boolean>(false);
     const [rejectionAction, setRejectionAction] = useState<RejectionAction>('available');
-    const [activeUsers, setActiveUsers] = useState<IUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
-    const [hasLoadedUsers, setHasLoadedUsers] = useState<boolean>(false);
 
     const availableUsers = useMemo(() => activeUsers.filter((user) => user.uid !== donation.requestor?.id), [activeUsers, donation.requestor?.id]);
 
@@ -112,27 +109,8 @@ const DonationCardMed = (props: DonationCardMedProps) => {
         }
     };
 
-    useEffect(() => {
-        if (!showRemoveDialog || hasLoadedUsers || isLoadingUsers) return;
-
-        const fetchActiveUsers = async () => {
-            setIsLoadingUsers(true);
-            try {
-                const users = await getAllActiveDbUsers();
-                setActiveUsers(users);
-            } catch (error) {
-                addErrorEvent('Fetch users for rejected item reassignment', error);
-            } finally {
-                setHasLoadedUsers(true);
-                setIsLoadingUsers(false);
-            }
-        };
-
-        fetchActiveUsers();
-    }, [hasLoadedUsers, isLoadingUsers, showRemoveDialog]);
-
     return (
-        <ProtectedAdminRoute>
+        <>
             <Card className="card--container" raised>
                 <CardActions className="card--container-image" onClick={() => setIdToDisplay(donation.id)}>
                     {donation.images && donation.images.length > 0 && <CardMedia component="img" alt={donation.model} image={donation.images[0]} />}
@@ -249,7 +227,7 @@ const DonationCardMed = (props: DonationCardMedProps) => {
                     </DialogActions>
                 </Dialog>
             )}
-        </ProtectedAdminRoute>
+        </>
     );
 };
 

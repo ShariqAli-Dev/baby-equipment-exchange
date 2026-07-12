@@ -14,12 +14,14 @@ import CustomDialog from './CustomDialog';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 //Api
 import { getOrderById, removeDonationFromOrder } from '@/api/firebase-donations';
+import { getAllActiveDbUsers } from '@/api/firebase-users';
 import { addErrorEvent } from '@/api/firebase';
 //Styles
 import '@/styles/globalStyles.css';
 //Types
 import { Order } from '@/types/OrdersTypes';
 import { Donation } from '@/models/donation';
+import { IUser } from '@/models/user';
 import type { OrderItemRejectionResolution } from '@/api/firebase-donations';
 
 type ReviewOrderProps = {
@@ -37,6 +39,10 @@ const ReviewOrder = (props: ReviewOrderProps) => {
     const [showCancelOrder, setShowCancelOrder] = useState<boolean>(false);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [dialogContent, setDialogContent] = useState<string>('Donation successfully removed from order');
+    // Reassignment candidates for item rejection (passed into DonationCardMed;
+    // becomes server-provided when the orders vertical migrates this view).
+    const [activeUsers, setActiveUsers] = useState<IUser[]>([]);
+    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(true);
 
     const fetchOrder = async (id: string): Promise<void> => {
         setIsLoading(true);
@@ -87,6 +93,19 @@ const ReviewOrder = (props: ReviewOrderProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
+    useEffect(() => {
+        const fetchActiveUsers = async () => {
+            try {
+                setActiveUsers(await getAllActiveDbUsers());
+            } catch (error) {
+                addErrorEvent('Fetch users for rejected item reassignment', error);
+            } finally {
+                setIsLoadingUsers(false);
+            }
+        };
+        fetchActiveUsers();
+    }, []);
+
     const donationToDisplay =
         donationIdToDisplay && currentOrder
             ? (currentOrder.items.find((i) => i.id === donationIdToDisplay) ?? currentOrder.rejectedItems?.find((i) => i.id === donationIdToDisplay))
@@ -136,6 +155,8 @@ const ReviewOrder = (props: ReviewOrderProps) => {
                                             donation={item}
                                             setIdToDisplay={setDonationIdToDisplay}
                                             handleRemoveFromOrder={handleRemoveFromOrder}
+                                            activeUsers={activeUsers}
+                                            isLoadingUsers={isLoadingUsers}
                                         />
                                     ))}
                                 </>
@@ -151,6 +172,8 @@ const ReviewOrder = (props: ReviewOrderProps) => {
                                             setIdToDisplay={setDonationIdToDisplay}
                                             handleRemoveFromOrder={handleRemoveFromOrder}
                                             showRemoveButton={false}
+                                            activeUsers={activeUsers}
+                                            isLoadingUsers={isLoadingUsers}
                                         />
                                     ))}
                                 </>
